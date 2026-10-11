@@ -42,7 +42,10 @@ window.I18N = {
     backup: "备份与迁移", backupHint: "复制下面的文本，在另一台设备的同一位置粘贴并导入。",
     copy: "复制", copied: "已复制", importBtn: "导入", imported: "已导入", badBackup: "这段文本不是有效的备份，没有导入。",
     invalidDate: "日期格式不对", missingDate: "请填写最近一次买入日期；不填则按未锁定处理。", saved: "已保存",
-    metricsSince: "Sharpe 和最大回撤按 {y} 年至 {d} 的回测计算。", lt1Share: "不足 1 股", realStatsNote: "上面的 1 日、今年和回撤是所选策略的数据，不是你的持仓。",
+    metricsSince: "Sharpe 和最大回撤按 {y} 年至 {d} 的回测计算。",
+    sortBy: "排序", sortDesc: "从高到低", sortAsc: "从低到高",
+    sort_default: "默认顺序", sort_ytd: "今年收益", sort_d1: "1 日收益", sort_m1: "1 月收益", sort_y1: "1 年收益",
+    sort_sharpe: "Sharpe", sort_cagr: "年化收益", sort_maxdd: "最大回撤（小的在前为从高到低）", lt1Share: "不足 1 股", realStatsNote: "上面的 1 日、今年和回撤是所选策略的数据，不是你的持仓。",
     aboutWhat: "这是什么", aboutWhatText: "ETFRegulus 是一个个人研究项目。网站每天用几种经典基准策略，在相同的交易规则下给出 ETF 持仓建议，并展示它们的历史回测。",
     rules: "交易规则", rulesList: [
       "只做多，可持有现金；现金不锁定。",
@@ -100,7 +103,10 @@ window.I18N = {
     backup: "Backup and transfer", backupHint: "Copy the text below and paste it here on another device to import.",
     copy: "Copy", copied: "Copied", importBtn: "Import", imported: "Imported", badBackup: "That text is not a valid backup; nothing was imported.",
     invalidDate: "Invalid date", missingDate: "Enter the date of the last purchase; without it the ETF is treated as unlocked.", saved: "Saved",
-    metricsSince: "Sharpe and max drawdown cover the backtest from {y} to {d}.", lt1Share: "< 1 share", realStatsNote: "1D, YTD and drawdown above are the chosen strategy's, not your holdings'.",
+    metricsSince: "Sharpe and max drawdown cover the backtest from {y} to {d}.",
+    sortBy: "Sort by", sortDesc: "High to low", sortAsc: "Low to high",
+    sort_default: "Default order", sort_ytd: "YTD return", sort_d1: "1-day return", sort_m1: "1-month return", sort_y1: "1-year return",
+    sort_sharpe: "Sharpe", sort_cagr: "CAGR", sort_maxdd: "Max drawdown (high to low = smallest first)", lt1Share: "< 1 share", realStatsNote: "1D, YTD and drawdown above are the chosen strategy's, not your holdings'.",
     aboutWhat: "What this is", aboutWhatText: "ETFRegulus is a personal research project. Every trading day the site turns a few classic baseline strategies, run under the same trading rules, into ETF holdings, and shows their history.",
     rules: "Trading rules", rulesList: [
       "Long-only, cash allowed; cash is never locked.",

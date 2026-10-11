@@ -181,3 +181,21 @@ test("every i18n key exists in both languages with the same shape", () => {
     if (zh[k] && typeof zh[k] === "object" && !Array.isArray(zh[k])) assert.deepEqual(Object.keys(zh[k]).sort(), Object.keys(en[k]).sort(), k);
   }
 });
+
+test("strategies sort by a metric, missing values last, ties in default order", () => {
+  const v = { a: 0.1, b: null, c: 0.3, d: 0.1, e: -0.2 };
+  const ids = ["a", "b", "c", "d", "e"];
+  assert.deepEqual(C.sortIds(ids, (id) => v[id], "desc"), ["c", "a", "d", "e", "b"]);
+  assert.deepEqual(C.sortIds(ids, (id) => v[id], "asc"), ["e", "a", "d", "c", "b"]);
+  // drawdown is sorted as shown (negative): high-to-low = smallest drawdown first
+  const dd = { x: -0.30, y: -0.05, z: 0 };
+  assert.deepEqual(C.sortIds(["x", "y", "z"], (id) => dd[id], "desc"), ["z", "y", "x"]);
+});
+
+test("sort settings are sanitized", () => {
+  const man = { strategies: [{ id: "momentum" }], ceilings: [5] };
+  assert.equal(C.sanitizeSettings({ sortKey: "sharpe", sortDir: "asc" }, man).sortKey, "sharpe");
+  assert.equal(C.sanitizeSettings({ sortKey: "sharpe", sortDir: "asc" }, man).sortDir, "asc");
+  assert.equal(C.sanitizeSettings({ sortKey: "bogus", sortDir: "up" }, man).sortKey, "default");
+  assert.equal(C.sanitizeSettings({ sortKey: "bogus", sortDir: "up" }, man).sortDir, "desc");
+});

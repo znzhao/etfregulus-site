@@ -8,7 +8,7 @@
   /* ------------------------------------------------------------------ state */
   let S = C.sanitizeSettings(readStore(), null);
   const D = { manifest: null, universe: null, today: null, live: null, bt: {}, assets: {}, sessions: [] };
-  const view = { tab: "equity", range: "ALL", bench: "", calYear: null, cmp: null, cmpRange: "5Y", rebShow: 12, liveShow: 20 };
+  const view = { tab: "equity", range: "ALL", bench: "", calYear: null, cmp: null, cmpRange: "5Y", rebShow: 12, liveShow: 20, cmpSort: { key: null, dir: "desc" } };
   let charts = [], renderToken = 0;
 
   function readStore() { try { return JSON.parse(localStorage.getItem(STORE_KEY) || "null"); } catch (e) { return null; } }
@@ -148,24 +148,46 @@
       tooltip: { trigger: "axis", confine: true, backgroundColor: css("--surface"), borderColor: ln, textStyle: { color: fg, fontSize: 12 } },
       legend: { type: "scroll", top: 0, left: 0, right: 0, textStyle: { color: mu }, itemWidth: 14, itemHeight: 8, pageIconColor: mu, pageTextStyle: { color: mu } },
     };
+    const baseTip = base.tooltip;
     const o = Object.assign(base, opt);
+    // Merge, do not replace: a chart's own tooltip settings (e.g. a value formatter) must keep
+    // the axis trigger, or the tooltip only appears on the (hidden) data points.
+    if (opt.tooltip) o.tooltip = Object.assign({}, baseTip, opt.tooltip);
+    // Crosshair: hovering (desktop) or pressing (phone) draws dashed lines to both axes, with the
+    // date and the value at the pointer labelled on the axes; the tooltip lists every series.
+    const ptrLabel = { backgroundColor: css("--accent"), color: css("--accent-fg"), padding: [3, 6], borderRadius: 4, fontSize: 11 };
+    const ptrLine = { color: mu, type: "dashed", width: 1 };
+    if (opt.xAxis && o.tooltip.trigger === "axis") {
+      o.tooltip.axisPointer = { type: "cross", crossStyle: ptrLine, lineStyle: ptrLine, label: ptrLabel };
+      o.tooltip.triggerOn = "mousemove|click";
+    }
     if (opt.xAxis) o.xAxis = [].concat(opt.xAxis).map((x) => {
       const ax = Object.assign({}, axisX, x);
       const d = x.data;
       if (d && d.length && typeof d[0] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d[0])) {
         const long = d.length > 70;          // months for long ranges, month-day for short ones
         ax.axisLabel = Object.assign({}, axisX.axisLabel, { formatter: (v) => (long ? v.slice(0, 7) : v.slice(5)) });
+        ax.axisPointer = { label: Object.assign({}, ptrLabel, { formatter: (p) => p.value }) };   // the full date
       }
       return ax;
     });
-    if (opt.yAxis) o.yAxis = [].concat(opt.yAxis).map((y) => Object.assign({}, axisY, y));
+    if (opt.yAxis) o.yAxis = [].concat(opt.yAxis).map((y) => {
+      const ay = Object.assign({}, axisY, y);
+      const f = y.axisLabel && y.axisLabel.formatter;
+      ay.axisPointer = { label: Object.assign({}, ptrLabel, { formatter: (p) => {
+        const v = Number(p.value), r = Math.abs(v) >= 1000 ? Math.round(v) : +v.toFixed(2);
+        return typeof f === "function" ? f(r) : r.toLocaleString(locale());
+      } }) };
+      return ay;
+    });
     c.setOption(o);
     charts.push(c);
     return c;
   }
+  const coarse = () => !!(window.matchMedia && matchMedia("(pointer: coarse)").matches);
   let resizeTimer = null;
   window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => charts.forEach((c) => c.resize()), 120); });
-  const line = (name, data, color, extra) => Object.assign({ name, type: "line", data, showSymbol: false, sampling: "lttb", lineStyle: { width: 1.6, color }, itemStyle: { color } }, extra || {});
+  const line = (name, data, color, extra) => Object.assign({ name, type: "line", data, showSymbol: false, lineStyle: { width: 1.6, color }, itemStyle: { color } }, extra || {});
 
   /* ------------------------------------------------------------------ routing and shell */
   const PAGES = ["today", "strategies", "compare", "settings", "about"];
@@ -314,8 +336,24 @@
   }
 
   /* ------------------------------------------------------------------ Strategies */
+  const SORT_VALUE = {
+    ytd: (e) => e.returns.ytd, d1: (e) => e.returns.d1, m1: (e) => e.returns.m1, y1: (e) => e.returns.y1,
+    sharpe: (e) => e.summary.sharpe, cagr: (e) => e.summary.cagr, maxdd: (e) => -e.summary.max_drawdown,
+  };
+  function sortedStrategies() {
+    const ids = D.manifest.strategies.map((s) => s.id);
+    if (S.sortKey === "default" || !SORT_VALUE[S.sortKey]) return ids;
+    return C.sortIds(ids, (id) => { const e = entry(id); return e ? SORT_VALUE[S.sortKey](e) : null; }, S.sortDir);
+  }
+  function sortBar() {
+    const opts = C.SORT_KEYS.map((k) => `<option value="${k}"${k === S.sortKey ? " selected" : ""}>${esc(t("sort_" + k))}</option>`).join("");
+    const dir = S.sortDir === "asc" ? "desc" : "asc";
+    return `<span class="row" style="gap:8px"><label class="muted small" for="f-sort">${t("sortBy")}</label>
+      <select id="f-sort" data-set="sortKey">${opts}</select>
+      ${S.sortKey === "default" ? "" : `<button class="btn" type="button" data-set="sortDir" data-v="${dir}" aria-label="${esc(t(S.sortDir === "asc" ? "sortAsc" : "sortDesc"))}">${S.sortDir === "asc" ? "↑ " + t("sortAsc") : "↓ " + t("sortDesc")}</button>`}</span>`;
+  }
   function pageStrategies() {
-    const cards = D.manifest.strategies.map((s) => {
+    const cards = sortedStrategies().map(strat).map((s) => {
       const e = entry(s.id); if (!e) return "";
       const top = Object.entries(e.weights).sort((a, b) => b[1] - a[1]).slice(0, 4)
         .map(([k, w]) => `<span class="chip">${label(k)} ${pp(w)}</span>`).join("");
@@ -329,7 +367,8 @@
         <div class="row" style="gap:6px">${top}</div>
         ${e.next_trades.length ? `<span class="muted small">${t("nextTrades")}: ${e.next_trades.length}</span>` : ""}</a>`;
     }).join("");
-    return `${staleBanner()}<div class="row between"><h1>${t("strategies")}</h1>${ceilingSeg(true)}</div><div class="grid">${cards}</div>
+    return `${staleBanner()}<div class="row between"><h1>${t("strategies")}</h1>${ceilingSeg(true)}</div>
+      <div class="row">${sortBar()}</div><div class="grid">${cards}</div>
       <p class="muted small">${esc(t("metricsSince", { y: D.manifest.backtest_start.slice(0, 4), d: D.manifest.data_date }))}</p>`;
   }
 
@@ -416,7 +455,7 @@
       const up = css("--up"), dn = css("--down");
       mk("c-main", { legend: { show: false }, xAxis: { type: "category", data: X }, yAxis: { type: "value", axisLabel: { formatter: (v) => v + "%" } },
         tooltip: { valueFormatter: (v) => v + "%" }, grid: { left: 10, right: 26, top: 16, bottom: 44, containLabel: true },
-        dataZoom: [{ type: "inside" }, { type: "slider", height: 18, bottom: 6 }],
+        dataZoom: coarse() ? [{ type: "slider", height: 18, bottom: 6 }] : [{ type: "inside" }, { type: "slider", height: 18, bottom: 6 }],
         series: [{ name: t("tab_daily"), type: "bar", large: true, data: b.ret.slice(a).map((v) => ({ value: +(v * 100).toFixed(2), itemStyle: { color: v >= 0 ? up : dn } })) }] });
     } else if (view.tab === "hold") {
       const w = b.weights, k0 = C.indexOnOrAfter(w.dates, b.dates[a]);
@@ -449,8 +488,12 @@
   function pageCompare(bts) {
     const chips = D.manifest.strategies.map((s) => `<label class="chip" style="cursor:pointer;font-family:var(--f-body);display:inline-flex;align-items:center;gap:6px">
       <input type="checkbox" data-cmp="${esc(s.id)}"${view.cmp.includes(s.id) ? " checked" : ""}><span class="sw" style="background:${esc(s.color)};margin:0"></span>${esc(s.name[S.lang])}</label>`).join("");
-    const rows = bts.map((b, k) => {
-      const id = view.cmp[k], a = C.rangeStart(b.dates, view.cmpRange), m = C.metrics(b.equity, a);
+    const ms = bts.map((b, k) => ({ id: view.cmp[k], m: C.metrics(b.equity, C.rangeStart(b.dates, view.cmpRange)) }));
+    const col = { total: (m) => m.total, sharpe: (m) => m.sharpe, mdd: (m) => -m.mdd, cagr: (m) => m.cagr, vol: (m) => m.vol };
+    const cs = view.cmpSort;
+    const order = cs.key && col[cs.key] ? C.sortIds(ms.map((x) => x.id), (id) => col[cs.key](ms.find((x) => x.id === id).m), cs.dir) : ms.map((x) => x.id);
+    const th = (k, txt) => `<th class="n"><button type="button" class="th-sort" data-act="cmpsort" data-k="${k}" aria-sort="${cs.key === k ? (cs.dir === "asc" ? "ascending" : "descending") : "none"}">${txt}<span class="arrow">${cs.key === k ? (cs.dir === "asc" ? "↑" : "↓") : "↕"}</span></button></th>`;
+    const rows = order.map((id) => ms.find((x) => x.id === id)).map(({ id, m }) => {
       return `<tr><td><span class="sw" style="background:${esc(strat(id).color)}"></span>${esc(sname(id))}</td><td class="n ${cls(m.total)}">${pct(m.total, 1, true)}</td>
         <td class="n">${fmtNum(m.sharpe)}</td><td class="n">${pct(-m.mdd)}</td><td class="n">${pct(m.cagr)}</td><td class="n">${pct(m.vol)}</td></tr>`;
     }).join("");
@@ -460,7 +503,7 @@
       ${bts.length ? `<div class="card"><h3>${t("growthCompare")}</h3><div id="c-ceq" class="chart"></div></div>
       <div class="grid2"><div class="card"><h3>${t("tab_dd")}</h3><div id="c-cdd" class="chart sm"></div><p class="muted small">${t("ddChartNote")}</p></div>
         <div class="card"><h3>${t("rolling")}</h3><div id="c-crs" class="chart sm"></div></div></div>
-      <div class="card"><h3>${t("metricsRange")}</h3><div class="tbl"><table><thead><tr><th></th><th class="n">${t("totalRet")}</th><th class="n">${t("sharpe")}</th><th class="n">${t("maxdd")}</th><th class="n">${t("cagr")}</th><th class="n">${t("vol")}</th></tr></thead><tbody>${rows}</tbody></table></div></div>`
+      <div class="card"><h3>${t("metricsRange")}</h3><div class="tbl"><table><thead><tr><th></th>${th("total", t("totalRet"))}${th("sharpe", t("sharpe"))}${th("mdd", t("maxdd"))}${th("cagr", t("cagr"))}${th("vol", t("vol"))}</tr></thead><tbody>${rows}</tbody></table></div></div>`
         : `<div class="card"><p class="muted">${t("atLeastOne")}</p></div>`}`;
   }
   function drawCompare(bts) {
@@ -555,6 +598,11 @@
     if (act === "retry") { boot(); return; }
     if (act === "more-reb") { view.rebShow += 30; render(); return; }
     if (act === "more-live") { view.liveShow += 30; render(); return; }
+    if (act === "cmpsort") {
+      const k = el.dataset.k, cs = view.cmpSort;
+      view.cmpSort = cs.key === k ? { key: k, dir: cs.dir === "desc" ? "asc" : "desc" } : { key: k, dir: "desc" };
+      render(); return;
+    }
     if (act === "hadd") {
       S.holdings.push({ t: D.universe.assets[0].ticker, sh: 0, d: "" });
       save(); render(); return;

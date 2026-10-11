@@ -186,8 +186,27 @@
   /* ---------------------------------------------------------------- settings */
   const DEFAULTS = {
     lang: "zh", theme: "system", updown: "red-up", plan: "spy_tlt_60_40", ceiling: 5, mode: "sim",
-    amount: 10000, cash: 0, holdings: []
+    amount: 10000, cash: 0, holdings: [], sortKey: "default", sortDir: "desc"
   };
+
+  /** Strategy sort keys offered on the Strategies page. */
+  const SORT_KEYS = ["default", "ytd", "d1", "m1", "y1", "sharpe", "cagr", "maxdd"];
+
+  /**
+   * Order strategy ids by a metric. `valueOf(id)` returns the number shown on screen (drawdown
+   * as a negative number, so "high to low" puts the smallest drawdown first). Missing values
+   * go last in either direction; ties keep the default order.
+   */
+  function sortIds(ids, valueOf, dir) {
+    const sign = dir === "asc" ? 1 : -1;
+    return ids.map((id, i) => ({ id, i, v: valueOf(id) }))
+      .sort((a, b) => {
+        const av = a.v == null || !isFinite(a.v), bv = b.v == null || !isFinite(b.v);
+        if (av || bv) return av === bv ? a.i - b.i : av ? 1 : -1;
+        return a.v === b.v ? a.i - b.i : sign * (a.v - b.v);
+      })
+      .map((x) => x.id);
+  }
 
   /** Clean any stored/imported settings against what the manifest offers. */
   function sanitizeSettings(raw, manifest) {
@@ -210,10 +229,12 @@
       .filter((h) => h && typeof h.t === "string" && /^[A-Z]{1,5}$/.test(h.t))
       .map((h) => ({ t: h.t, sh: num(h.sh, 0), d: isValidDate(h.d) ? h.d : "" }))
       .slice(0, 50) : [];
+    if (SORT_KEYS.includes(x.sortKey)) s.sortKey = x.sortKey;
+    if (["asc", "desc"].includes(x.sortDir)) s.sortDir = x.sortDir;
     return s;
   }
 
   return { DAY, toMs, isoOf, addDays, isValidDate, firstSessionOnOrAfter, sellableFrom, nextSession,
            dailyReturns, rollingDrawdown, metrics, rollingSharpe, indexOnOrAfter, rangeStart,
-           sharesFor, realPlan, freshness, DEFAULTS, sanitizeSettings };
+           sharesFor, realPlan, freshness, DEFAULTS, SORT_KEYS, sortIds, sanitizeSettings };
 });

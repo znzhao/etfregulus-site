@@ -143,7 +143,7 @@
       animation: false, textStyle: { fontFamily: css("--f-body"), color: fg },
       grid: { left: 10, right: 26, top: 28, bottom: 8, containLabel: true },
       tooltip: { trigger: "axis", confine: true, backgroundColor: css("--surface"), borderColor: ln, textStyle: { color: fg, fontSize: 12 } },
-      legend: { top: 0, left: 0, textStyle: { color: mu }, itemWidth: 14, itemHeight: 8 },
+      legend: { type: "scroll", top: 0, left: 0, right: 0, textStyle: { color: mu }, itemWidth: 14, itemHeight: 8, pageIconColor: mu, pageTextStyle: { color: mu } },
     };
     const o = Object.assign(base, opt);
     if (opt.xAxis) o.xAxis = [].concat(opt.xAxis).map((x) => {
@@ -468,7 +468,9 @@
       return line(sname(id), align(b, (bb, i) => +((bb.equity[i] / bb.equity[i0]) * 10000).toFixed(0)), strat(id).color); });
     mk("c-ceq", { xAxis: { type: "category", data: X, boundaryGap: false }, yAxis: { type: "value", scale: true }, tooltip: { valueFormatter: (v) => (v == null ? "—" : money(v)) }, series: eqS });
     mk("c-cdd", { xAxis: { type: "category", data: X, boundaryGap: false }, yAxis: { type: "value", max: 0, axisLabel: { formatter: (v) => v + "%" } }, tooltip: { valueFormatter: (v) => v + "%" },
-      series: bts.map((b, k) => line(sname(view.cmp[k]), align(b, (bb, i) => -(bb.dd12[i] * 100).toFixed(2)), strat(view.cmp[k]).color, { lineStyle: { width: 1.2, color: strat(view.cmp[k]).color } })) });
+      series: bts.map((b, k) => line(sname(view.cmp[k]), align(b, (bb, i) => -(bb.dd12[i] * 100).toFixed(2)), strat(view.cmp[k]).color, Object.assign({ lineStyle: { width: 1.2, color: strat(view.cmp[k]).color } },
+        k === 0 ? { markLine: { symbol: 'none', silent: true, label: { formatter: t('ceiling') + ' ' + S.ceiling + '%', color: css('--warn'), position: 'insideStartTop' },
+          lineStyle: { color: css('--warn'), type: 'dashed' }, data: [{ yAxis: -S.ceiling }] } } : {}))) });
     const from = Math.max(a, 252), X2 = ref.dates.slice(from);
     mk("c-crs", { xAxis: { type: "category", data: X2, boundaryGap: false }, yAxis: { type: "value" }, tooltip: { valueFormatter: (v) => (v == null ? "—" : fmtNum(v)) },
       series: bts.map((b, k) => {

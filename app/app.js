@@ -327,7 +327,7 @@
         ${e.next_trades.length ? `<span class="muted small">${t("nextTrades")}: ${e.next_trades.length}</span>` : ""}</a>`;
     }).join("");
     return `${staleBanner()}<div class="row between"><h1>${t("strategies")}</h1>${ceilingSeg(true)}</div><div class="grid">${cards}</div>
-      <p class="muted small">${t("dataAsOf")} ${esc(D.manifest.data_date)} · ${t("sharpe")} / ${t("maxdd")}: ${esc(D.manifest.backtest_start.slice(0, 4))}–</p>`;
+      <p class="muted small">${esc(t("metricsSince", { y: D.manifest.backtest_start.slice(0, 4), d: D.manifest.data_date }))}</p>`;
   }
 
   /* ------------------------------------------------------------------ Strategy detail */

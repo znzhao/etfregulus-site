@@ -31,6 +31,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Front-end unit tests
+        run: node --test tests/
+
       - name: Pinned ETFRegulus version
         id: ref
         run: echo "ref=$(tr -d '[:space:]' < ETFREGULUS_REF)" >> "$GITHUB_OUTPUT"

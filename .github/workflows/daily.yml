@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Front-end unit tests
-        run: node --test tests/
+        run: node --test tests/*.test.js*.test.js
 
       - name: Pinned ETFRegulus version
         id: ref

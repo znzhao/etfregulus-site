@@ -21,6 +21,6 @@ since 2004. Not investment advice.
 
 ## Development
 
-    node --test tests/          # unit tests of app/core.js and the i18n tables
+    node --test tests/*.test.js  # unit tests of app/core.js and the i18n tables
 
 To change the strategy code the site uses, tag a new ETFRegulus version and update `ETFREGULUS_REF`.

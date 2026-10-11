@@ -68,6 +68,7 @@ main > * { min-width: 0; }
 .badge.bad::before { background: var(--warn); }
 .badge.acc { background: var(--accent-soft); color: var(--accent); }
 .chip { font-family: var(--f-mono); font-size: .78rem; padding: 2px 8px; border-radius: 6px; background: var(--surface-2); white-space: nowrap; }
+.sn { font-family: var(--f-body); color: var(--muted); }
 .alert { border-radius: var(--r); padding: 12px 14px; background: var(--warn-soft); border: 1px solid var(--line); }
 .alert b { color: var(--warn); }
 .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); max-width: 100%; }

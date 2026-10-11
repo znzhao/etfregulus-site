@@ -157,8 +157,21 @@ test("settings are sanitized against the manifest", () => {
   assert.deepEqual(C.sanitizeSettings({ ceiling: 7 }, man).ceiling, 5);
 });
 
+test("every ETF has a short name in both languages", () => {
+  global.window = global.window || {};
+  require("../app/i18n.js");
+  const { zh, en } = global.window.I18N;
+  const tickers = ["SPY", "QQQ", "IWM", "XLK", "XLC", "XLY", "XLP", "XLE", "XLF", "XLI", "XLB", "XLV", "XLU", "XLRE",
+                   "SHY", "IEF", "TLT", "TIP", "LQD", "HYG", "GLD", "DBC", "VEA", "VWO"];
+  for (const tk of tickers) {
+    assert.ok(zh.etf[tk] && zh.etf[tk].length <= 6, "zh " + tk);
+    assert.ok(en.etf[tk] && en.etf[tk].length <= 14, "en " + tk);
+  }
+  assert.equal(Object.keys(zh.etf).length, tickers.length);
+});
+
 test("every i18n key exists in both languages with the same shape", () => {
-  global.window = {};
+  global.window = global.window || {};
   require("../app/i18n.js");
   const { zh, en } = global.window.I18N;
   assert.deepEqual(Object.keys(zh).sort(), Object.keys(en).sort());

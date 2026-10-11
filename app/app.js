@@ -74,7 +74,10 @@
   const pidOf = (id, c = S.ceiling) => id + "_D" + c;
   const entry = (id, c) => D.today.portfolios[pidOf(id, c)];
   const price = (tk) => (D.assets[tk] ? D.assets[tk].close : NaN);
-  const aname = (tk) => (D.assets[tk] ? D.assets[tk].name[S.lang] : tk);
+  /* Every ETF is shown with a short name next to its ticker (falls back to the data's name). */
+  const aname = (tk) => { const m = t("etf"); return (m && m[tk]) || (D.assets[tk] ? D.assets[tk].name[S.lang] : tk); };
+  const labelText = (tk) => (tk === "CASH" ? t("cash") : tk + " " + aname(tk));
+  const label = (tk) => (tk === "CASH" ? esc(t("cash")) : `${esc(tk)} <span class="sn">${esc(aname(tk))}</span>`);
   const nextDay = () => C.nextSession(D.manifest.data_date, D.sessions);
 
   /* asset colours: one hue family per asset class */
@@ -278,13 +281,13 @@
           <div class="bar"><i style="width:${(cashW * 100).toFixed(1)}%;background:var(--muted)"></i></div></div><div class="rt"><span class="num">${pp(cashW)}</span></div></div>
         </div></div></div>
       <div class="card"><div class="card-head"><h3>${t("lastRebalance")}</h3><span class="muted small num">${lr ? esc(lr.date) : t("never")}</span></div>
-        ${lr ? `<div class="row">${lr.changes.map((c) => `<span class="chip"><span class="${c.to > c.from ? "up" : "down"}">${c.to > c.from ? t("buy") : t("sell")}</span> ${esc(c.ticker)} ${pp(c.from)}→${pp(c.to)}</span>`).join("")}</div>` : ""}</div>`;
+        ${lr ? `<div class="row">${lr.changes.map((c) => `<span class="chip"><span class="${c.to > c.from ? "up" : "down"}">${c.to > c.from ? t("buy") : t("sell")}</span> ${label(c.ticker)} ${pp(c.from)}→${pp(c.to)}</span>`).join("")}</div>` : ""}</div>`;
   }
   function drawToday() {
     const e = entry(S.plan);
     if (!e || S.mode !== "sim") return;
     const data = Object.entries(e.weights).sort((a, b) => b[1] - a[1]).map(([k, w]) =>
-      ({ name: k === "CASH" ? t("cash") : k, value: +(w * 100).toFixed(1), itemStyle: { color: assetColor(k) } }));
+      ({ name: labelText(k), value: +(w * 100).toFixed(1), itemStyle: { color: assetColor(k) } }));
     mk("c-donut", { tooltip: { trigger: "item", confine: true, formatter: "{b}: {c}%" }, legend: { show: false },
       series: [{ type: "pie", radius: ["52%", "82%"], avoidLabelOverlap: true, label: { show: false },
         itemStyle: { borderColor: css("--surface"), borderWidth: 2 }, data }] });
@@ -315,7 +318,7 @@
     const cards = D.manifest.strategies.map((s) => {
       const e = entry(s.id); if (!e) return "";
       const top = Object.entries(e.weights).sort((a, b) => b[1] - a[1]).slice(0, 4)
-        .map(([k, w]) => `<span class="chip">${k === "CASH" ? t("cash") : esc(k)} ${pp(w)}</span>`).join("");
+        .map(([k, w]) => `<span class="chip">${label(k)} ${pp(w)}</span>`).join("");
       const plan = s.id === S.plan;
       return `<a class="card ${plan ? "hl" : ""}" href="#s-${esc(s.id)}">
         <div class="row between"><b><span class="sw" style="background:${esc(s.color)}"></span>${esc(s.name[S.lang])}</b>
@@ -344,10 +347,10 @@
     const statsCards = [[t("cagr"), pct(m.cagr)], [t("sharpe"), fmtNum(m.sharpe)], [t("maxdd"), pct(-m.max_drawdown)], [t("vol"), pct(m.volatility)]]
       .map(([k, v]) => `<div class="stat"><span class="label">${k}</span><span class="v">${v}</span></div>`).join("");
     const holdNow = Object.entries(e.current_weights).sort((x, y) => y[1] - x[1]).map(([k, w]) =>
-      `<span class="chip">${k === "CASH" ? t("cash") : esc(k)} ${pp(w)}${e.locks[k] ? " · " + esc(md(e.locks[k])) : ""}</span>`).join("");
+      `<span class="chip">${label(k)} ${pp(w)}${e.locks[k] ? " · " + esc(md(e.locks[k])) : ""}</span>`).join("");
     const reb = b.rebalances.slice().reverse();
     const rebRows = reb.slice(0, view.rebShow).map((r) => `<tr><td class="num">${esc(r.date)}</td><td style="white-space:normal">${r.changes.map((c) =>
-      `<span class="chip"><span class="${c.to > c.from ? "up" : "down"}">${c.to > c.from ? "+" : "−"}</span>${esc(c.ticker)} ${pp(c.from)}→${pp(c.to)}</span>`).join(" ")}</td></tr>`).join("");
+      `<span class="chip"><span class="${c.to > c.from ? "up" : "down"}">${c.to > c.from ? "+" : "−"}</span>${label(c.ticker)} ${pp(c.from)}→${pp(c.to)}</span>`).join(" ")}</td></tr>`).join("");
     return `${staleBanner()}
       <div class="card"><a href="#strategies" class="small" style="text-decoration:none">← ${t("strategies")}</a>
         <div class="card-head"><h1><span class="sw" style="background:${esc(s.color)};width:14px;height:14px"></span>${esc(s.name[S.lang])}</h1>
@@ -385,7 +388,7 @@
     return `<div class="card"><div class="card-head"><h3>${t("live")}</h3><span class="muted small">${esc(t("liveSince", { d: L.launch_date }))}</span></div>
       <div class="tbl"><table><thead><tr><th>${t("date")}</th><th class="n">${t("d1")}</th><th>${t("changes")}</th></tr></thead><tbody>
       ${shown.map((r) => `<tr><td class="num">${esc(r.date)}</td><td class="n ${cls(r.d1)}">${pct(r.d1, 2, true)}</td><td style="white-space:normal">${r.changes.length
-        ? r.changes.map((c) => `<span class="chip">${c.to > c.from ? "+" : "−"}${esc(c.ticker)} ${pp(c.to)}</span>`).join(" ") : `<span class="muted">${t("hold")}</span>`}</td></tr>`).join("")}
+        ? r.changes.map((c) => `<span class="chip">${c.to > c.from ? "+" : "−"}${label(c.ticker)} ${pp(c.to)}</span>`).join(" ") : `<span class="muted">${t("hold")}</span>`}</td></tr>`).join("")}
       </tbody></table></div>
       ${rows.length > view.liveShow ? `<button class="btn link" type="button" data-act="more-live">${t("showMore")}</button>` : ""}</div>`;
   }
@@ -419,7 +422,7 @@
       const w = b.weights, k0 = C.indexOnOrAfter(w.dates, b.dates[a]);
       const dates = w.dates.slice(k0), vals = w.values.slice(k0);
       const series = w.assets.map((tk, j) => ({ tk, j, max: Math.max(...vals.map((r) => r[j])) })).filter((x) => x.max > 0.001)
-        .map(({ tk, j }) => ({ name: tk === "CASH" ? t("cash") : tk, type: "line", stack: "w", showSymbol: false, lineStyle: { width: 0 },
+        .map(({ tk, j }) => ({ name: labelText(tk), type: "line", stack: "w", showSymbol: false, lineStyle: { width: 0 },
           areaStyle: { color: assetColor(tk), opacity: 0.95 }, itemStyle: { color: assetColor(tk) }, emphasis: { focus: "series" },
           data: vals.map((r) => +(r[j] * 100).toFixed(1)) }));
       mk("c-main", { legend: { type: "scroll", top: 0 }, grid: { left: 10, right: 26, top: 34, bottom: 8, containLabel: true },
@@ -483,7 +486,7 @@
   /* ------------------------------------------------------------------ Settings */
   function pageSettings() {
     const opts = D.manifest.strategies.map((s) => `<option value="${esc(s.id)}"${s.id === S.plan ? " selected" : ""}>${esc(s.name[S.lang])}</option>`).join("");
-    const tickOpts = (cur) => D.universe.assets.map((a) => `<option value="${a.ticker}"${a.ticker === cur ? " selected" : ""}>${a.ticker} · ${esc(a.name[S.lang])}</option>`).join("");
+    const tickOpts = (cur) => D.universe.assets.map((a) => `<option value="${a.ticker}"${a.ticker === cur ? " selected" : ""}>${a.ticker} · ${esc(aname(a.ticker))}</option>`).join("");
     const rows = S.holdings.map((h, i) => `<div class="hrow">
         <select id="h-t-${i}" data-h="${i}" data-k="t" aria-label="ETF">${tickOpts(h.t)}</select>
         <input id="h-s-${i}" type="number" inputmode="decimal" min="0" step="1" value="${esc(h.sh)}" data-h="${i}" data-k="sh" aria-label="${esc(t("shares"))}" placeholder="${esc(t("shares"))}">

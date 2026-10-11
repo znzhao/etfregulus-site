@@ -55,7 +55,8 @@ window.I18N = {
     disclaimer: "本网站仅展示个人研究结果，不构成任何投资建议。",
     range: { "1M": "1月", "3M": "3月", "YTD": "今年", "1Y": "1年", "5Y": "5年", "ALL": "全部" },
     months: ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"],
-    addToHome: "可在手机浏览器菜单中选择“添加到主屏幕”。"
+    addToHome: "可在手机浏览器菜单中选择“添加到主屏幕”。",
+    etf: { SPY: "标普500", QQQ: "纳指100", IWM: "罗素2000", XLK: "科技", XLC: "通信", XLY: "可选消费", XLP: "必需消费", XLE: "能源", XLF: "金融", XLI: "工业", XLB: "材料", XLV: "医疗", XLU: "公用事业", XLRE: "地产", SHY: "短期美债", IEF: "中期美债", TLT: "长期美债", TIP: "通胀美债", LQD: "公司债", HYG: "高收益债", GLD: "黄金", DBC: "商品", VEA: "发达市场", VWO: "新兴市场" }
   },
   en: {
     today: "Today", strategies: "Strategies", compare: "Compare", settings: "Settings", about: "About",
@@ -112,6 +113,7 @@ window.I18N = {
     disclaimer: "This site shows personal research results. It is not investment advice.",
     range: { "1M": "1M", "3M": "3M", "YTD": "YTD", "1Y": "1Y", "5Y": "5Y", "ALL": "All" },
     months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-    addToHome: "On a phone, use the browser menu's “Add to Home Screen”."
+    addToHome: "On a phone, use the browser menu's “Add to Home Screen”.",
+    etf: { SPY: "S&P 500", QQQ: "Nasdaq 100", IWM: "Small caps", XLK: "Tech", XLC: "Comms", XLY: "Discretionary", XLP: "Staples", XLE: "Energy", XLF: "Financials", XLI: "Industrials", XLB: "Materials", XLV: "Health care", XLU: "Utilities", XLRE: "Real estate", SHY: "Short Tsy", IEF: "Mid Tsy", TLT: "Long Tsy", TIP: "TIPS", LQD: "IG credit", HYG: "High yield", GLD: "Gold", DBC: "Commodities", VEA: "Developed", VWO: "Emerging" }
   }
 };

@@ -261,10 +261,10 @@
   function planHead(e) {
     const opts = D.manifest.strategies.map((s) => `<option value="${esc(s.id)}"${s.id === S.plan ? " selected" : ""}>${esc(s.name[S.lang])}</option>`).join("");
     return `<div class="card">
-      <div class="card-head"><div style="display:grid;gap:4px;min-width:0"><span class="label">${t("myPlan")}</span>
-        <label class="sr" style="display:flex;gap:8px;align-items:center"><select data-set="plan" aria-label="${esc(t("planStrategy"))}" style="font-family:var(--f-display);font-weight:700;font-size:1.15rem">${opts}</select></label></div>
-        ${riskChip(e)}</div>
-      ${ctl([ceilingRow(), [t("holdingsMode"), seg("set", "mode", [["sim", t("modeSim")], ["real", t("modeReal")]], S.mode)]])}
+      ${ctl([[t("myPlan"), `<select class="plan-sel" data-set="plan" aria-label="${esc(t("planStrategy"))}">${opts}</select>`],
+        ceilingRow(),
+        [t("holdingsMode"), seg("set", "mode", [["sim", t("modeSim")], ["real", t("modeReal")]], S.mode)],
+        [t("riskStateLbl"), riskChip(e)]])}
     </div>`;
   }
   function statsRow(e, valueLabel, value) {
@@ -332,7 +332,7 @@
     const p = C.realPlan({ holdings: S.holdings, cash: S.cash, target: e.weights, prices, nextDay: nd, lockDays: D.manifest.lock_days, sessions: D.sessions });
     const rows = p.rows.map((r) => {
       const side = r.trade > 0 ? "buy" : r.trade < 0 ? "sell" : "hold";
-      return `<div class="trade r3"><span class="side ${side}">${t(side)}${r.trade ? " " + intFmt(Math.abs(r.trade)) : ""}</span><span class="num">${esc(r.t)}</span>
+      return `<div class="trade r3"><span class="side ${side === "hold" ? "keep" : side}">${t(side)}${r.trade ? " " + intFmt(Math.abs(r.trade)) : ""}</span><span class="num">${esc(r.t)}</span>
         <span class="small" style="min-width:0;display:grid;gap:2px"><span class="muted">${esc(aname(r.t))}</span>
           <span><span class="num">${intFmt(r.sh)} → ${intFmt(r.tsh)}</span> ${t("sharesUnit")} · <span class="num">${money(r.tsh * r.px)}</span></span>
           ${r.locked ? `<span><span class="badge acc">${esc(t("sellableFrom", { d: md(r.sellable) }))}</span></span>` : ""}</span></div>`;
@@ -497,8 +497,8 @@
 
   /* ------------------------------------------------------------------ Compare */
   function pageCompare(bts) {
-    const chips = D.manifest.strategies.map((s) => `<label class="chip" style="cursor:pointer;font-family:var(--f-body);display:inline-flex;align-items:center;gap:6px">
-      <input type="checkbox" data-cmp="${esc(s.id)}"${view.cmp.includes(s.id) ? " checked" : ""}><span class="sw" style="background:${scolor(s.id)};margin:0"></span>${esc(s.name[S.lang])}</label>`).join("");
+    const chips = D.manifest.strategies.map((s) => `<label class="pick${view.cmp.includes(s.id) ? " on" : ""}">
+      <input type="checkbox" data-cmp="${esc(s.id)}"${view.cmp.includes(s.id) ? " checked" : ""}><span class="sw" style="background:${scolor(s.id)};margin:0"></span><span class="pick-name">${esc(s.name[S.lang])}</span></label>`).join("");
     const ms = bts.map((b, k) => ({ id: view.cmp[k], m: C.metrics(b.equity, C.rangeStart(b.dates, view.cmpRange)) }));
     const col = { total: (m) => m.total, sharpe: (m) => m.sharpe, mdd: (m) => -m.mdd, cagr: (m) => m.cagr, vol: (m) => m.vol };
     const cs = view.cmpSort;
@@ -509,7 +509,7 @@
         <td class="n">${fmtNum(m.sharpe)}</td><td class="n">${pct(-m.mdd)}</td><td class="n opt">${pct(m.cagr)}</td><td class="n opt">${pct(m.vol)}</td></tr>`;
     }).join("");
     return `${staleBanner()}<h1>${t("compare")}</h1>
-      <div class="card"><span class="label">${t("pick")}</span><div class="row" style="gap:6px">${chips}</div>
+      <div class="card"><span class="label">${t("pick")}</span><div class="pickgrid">${chips}</div>
         ${ctl([ceilingRow(), [t("rangeLbl"), seg("view", "cmpRange", RANGES.map((k) => [k, t("range")[k]]), view.cmpRange)]])}</div>
       ${bts.length ? `<div class="card"><h3>${t("growthCompare")}</h3><div id="c-ceq" class="chart"></div></div>
       <div class="grid2"><div class="card"><h3>${t("tab_dd")}</h3><div id="c-cdd" class="chart sm"></div><p class="muted small">${t("ddChartNote")}</p></div>
@@ -542,11 +542,13 @@
     const opts = D.manifest.strategies.map((s) => `<option value="${esc(s.id)}"${s.id === S.plan ? " selected" : ""}>${esc(s.name[S.lang])}</option>`).join("");
     const tickOpts = (cur) => D.universe.assets.map((a) => `<option value="${a.ticker}"${a.ticker === cur ? " selected" : ""}>${a.ticker} · ${esc(aname(a.ticker))}</option>`).join("");
     const rows = S.holdings.map((h, i) => `<div class="hrow">
-        <select id="h-t-${i}" data-h="${i}" data-k="t" aria-label="ETF">${tickOpts(h.t)}</select>
-        <input id="h-s-${i}" type="number" inputmode="decimal" min="0" step="1" value="${esc(h.sh)}" data-h="${i}" data-k="sh" aria-label="${esc(t("shares"))}" placeholder="${esc(t("shares"))}">
-        <input id="h-d-${i}" type="date" value="${esc(h.d)}" max="${esc(D.manifest.data_date)}" data-h="${i}" data-k="d" aria-label="${esc(t("lastBuy"))}">
-        <button class="btn" type="button" data-act="hrm" data-i="${i}">${t("remove")}</button>
-        <span class="err" id="h-e-${i}" style="grid-column:1/-1"${h.d || !h.sh ? " hidden" : ""}>${t("missingDate")}</span></div>`).join("");
+        <div class="hrow-top"><select id="h-t-${i}" data-h="${i}" data-k="t" aria-label="ETF">${tickOpts(h.t)}</select>
+          <button class="btn" type="button" data-act="hrm" data-i="${i}">${t("remove")}</button></div>
+        <div class="hrow-grid">
+          <label class="sub" for="h-s-${i}">${t("shares")}<input id="h-s-${i}" type="number" inputmode="decimal" min="0" step="1" value="${esc(h.sh)}" data-h="${i}" data-k="sh"></label>
+          <label class="sub" for="h-d-${i}">${t("lastBuy")}<input id="h-d-${i}" type="date" value="${esc(h.d)}" max="${esc(D.manifest.data_date)}" data-h="${i}" data-k="d"></label>
+        </div>
+        <span class="err" id="h-e-${i}"${h.d || !h.sh ? " hidden" : ""}>${t("missingDate")}</span></div>`).join("");
     return `<h1>${t("settings")}</h1><p class="muted">${t("settingsPrivacy")}</p>
       <div class="card form">
         <div class="field"><label for="f-plan">${t("planStrategy")}</label><select id="f-plan" data-set="plan">${opts}</select></div>
@@ -557,7 +559,7 @@
           : `<div class="field"><label for="f-cash">${t("cash")} (USD)</label><input id="f-cash" type="number" inputmode="decimal" min="0" step="100" value="${S.cash}" data-save="cash"><span class="hint">${t("cashHint")}</span></div>
              <div class="field"><span class="lbl">${t("myHoldings")}</span><span class="hint">${t("holdingsHint")}</span>
                ${rows || `<p class="muted small">${t("noRows")}</p>`}
-               <div><button class="btn" type="button" data-act="hadd">+ ${t("addRow")}</button></div></div>`}
+               <button class="btn add" type="button" data-act="hadd">+ ${t("addRow")}</button></div>`}
       </div>
       <div class="card form">
         <div class="field"><span class="lbl">${t("language")}</span>${seg("set", "lang", [["zh", "中文"], ["en", "English"]], S.lang)}</div>
@@ -566,7 +568,8 @@
       </div>
       <div class="card form"><div class="field"><label for="f-backup">${t("backup")}</label><span class="hint">${t("backupHint")}</span>
         <textarea id="f-backup" spellcheck="false" autocomplete="off">${esc(JSON.stringify(S))}</textarea>
-        <div class="row"><button class="btn" type="button" data-act="copy">${t("copy")}</button><button class="btn primary" type="button" data-act="import">${t("importBtn")}</button><span id="b-msg" class="muted small" role="status"></span></div></div></div>
+        <div class="btn2"><button class="btn" type="button" data-act="copy">${t("copy")}</button><button class="btn primary" type="button" data-act="import">${t("importBtn")}</button></div>
+        <span id="b-msg" class="muted small" role="status"></span></div></div>
       <p class="muted small">${t("addToHome")}</p>`;
   }
 

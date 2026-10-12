@@ -89,6 +89,26 @@ textarea { width: 100%; min-height: 96px; font: .8rem/1.4 var(--f-mono); }
 .ctl-v > .seg { display: flex; width: 100%; }
 .ctl-v > .seg button { flex: 1 1 0; padding-inline: 6px; }
 .ctl-v > .badge { justify-self: start; }
+.ctl-v > select { width: 100%; }
+.plan-sel { font-weight: 600; }
+/* Compare: equal-width strategy toggles */
+.pickgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pick { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; background: var(--surface); }
+.pick.on { background: var(--accent-soft); border-color: transparent; }
+.pick input { margin: 0; flex: 0 0 auto; }
+.pick-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Settings: full-width controls, one card per holding */
+.form .field > .seg { display: flex; width: 100%; }
+.form .field > .seg button { flex: 1 1 0; padding-inline: 6px; }
+.form .field > select, .form .field > input { width: 100%; }
+.hrow { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; }
+.hrow-top { display: flex; gap: 8px; align-items: center; }
+.hrow-top select { flex: 1 1 auto; min-width: 0; }
+.hrow-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+label.sub { display: grid; gap: 4px; font-size: .8rem; color: var(--muted); font-weight: 400; min-width: 0; }
+label.sub input { width: 100%; color: var(--fg); }
+.btn.add { width: 100%; border-style: dashed; }
+.btn2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .sortrow { display: flex; gap: 8px; width: 100%; min-width: 0; }
 .sortrow select { flex: 1 1 auto; min-width: 0; }
 .sortrow .dir { flex: 0 0 auto; white-space: nowrap; }
@@ -113,7 +133,7 @@ textarea { width: 100%; min-height: 96px; font: .8rem/1.4 var(--f-mono); }
 .side { font-size: .78rem; font-weight: 600; padding: 2px 8px; border-radius: 6px; }
 .side.buy { color: var(--up); background: color-mix(in srgb, var(--up) 12%, transparent); }
 .side.sell { color: var(--down); background: color-mix(in srgb, var(--down) 12%, transparent); }
-.side.hold { color: var(--muted); background: var(--surface-2); }
+.side.keep { color: var(--muted); background: var(--surface-2); }
 .hero { display: grid; grid-template-columns: minmax(0, 260px) minmax(0, 1fr); gap: 20px; align-items: start; }
 
 /* strategy cards */
@@ -147,8 +167,7 @@ table.months td.n { font-size: .78rem; padding: 5px 6px; }
 .field { display: grid; gap: 6px; }
 .field > label, .field > .lbl { font-weight: 600; }
 .hint { font-size: .82rem; color: var(--muted); }
-.hrow { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr) auto; gap: 8px; align-items: center; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
-.field > .seg, .field > .btn { justify-self: start; }
+.field > .btn { justify-self: start; }
 .err { color: var(--red); font-size: .8rem; }
 .center { display: grid; place-items: center; align-content: center; min-height: 40vh; text-align: center; gap: 12px; }
 .spark { display: block; max-width: 100%; }
@@ -164,8 +183,8 @@ ul.plain { margin: 0; padding-left: 1.1rem; display: grid; gap: 6px; }
   nav.bottom a[aria-current="page"] { color: var(--accent); }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grid2, .hero { grid-template-columns: minmax(0, 1fr); }
-  .hrow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .ctl { max-width: none; }
+  .pickgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .opt { display: none; }   /* secondary table columns hidden on phones */
   table td.n, table th.n { padding-inline: 6px; }
   .chart-ctl > .seg.full { display: flex; width: 100%; }

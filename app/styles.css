@@ -157,7 +157,7 @@ td.n, th.n { text-align: right; font-family: var(--f-mono); font-variant-numeric
 tr:last-child td { border-bottom: 0; }
 table.months td.n { font-size: .78rem; padding: 5px 6px; }
 .th-sort { border: 0; background: none; padding: 2px 0; cursor: pointer; color: inherit; font: inherit; display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; }
-.th-sort .arrow { color: var(--muted); font-family: var(--f-body); }
+.th-sort .arrow { color: var(--muted); display: inline-flex; }
 .th-sort[aria-sort="ascending"], .th-sort[aria-sort="descending"] { color: var(--fg); font-weight: 600; }
 .th-sort[aria-sort="ascending"] .arrow, .th-sort[aria-sort="descending"] .arrow { color: var(--accent); }
 
@@ -177,6 +177,8 @@ table.months td.n { font-size: .78rem; padding: 5px 6px; }
 .center { display: grid; place-items: center; align-content: center; min-height: 40vh; text-align: center; gap: 12px; }
 .spark { display: block; max-width: 100%; }
 .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.ic { display: inline-block; flex: none; vertical-align: -1px; }
+.btn .ic, .badge .ic { margin-right: 2px; }
 ul.plain { margin: 0; padding-left: 1.1rem; display: grid; gap: 6px; }
 
 @media (max-width: 760px) {

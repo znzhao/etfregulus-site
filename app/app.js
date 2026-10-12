@@ -79,6 +79,15 @@
   const labelText = (tk) => (tk === "CASH" ? t("cash") : tk + " " + aname(tk));
   const label = (tk) => (tk === "CASH" ? esc(t("cash")) : `${esc(tk)} <span class="sn">${esc(aname(tk))}</span>`);
   const nextDay = () => C.nextSession(D.manifest.data_date, D.sessions);
+  /* Line icons drawn as SVG: arrow/star characters are shown as colour emoji on some phones. */
+  const ICON_PATH = {
+    up: '<path d="M2 7.5 5 4.5 8 7.5"/>',
+    down: '<path d="M2 4.5 5 7.5 8 4.5"/>',
+    both: '<path d="M2.5 4.8 5 2.3 7.5 4.8"/><path d="M2.5 7.2 5 9.7 7.5 7.2"/>',
+  };
+  const icon = (k) => k === "star"
+    ? '<svg class="ic" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M6 1.2l1.45 2.95 3.25.47-2.35 2.3.55 3.24L6 8.63 3.1 10.16l.55-3.24L1.3 4.62l3.25-.47z" fill="currentColor"/></svg>'
+    : `<svg class="ic" viewBox="0 0 10 12" width="10" height="12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${ICON_PATH[k]}</svg>`;
 
   /* Colours. Strategies: six well-separated, muted hues that avoid the gain/loss red and green;
      a lighter set for dark mode. ETFs: one family per asset class (US equity blues, sectors in
@@ -359,7 +368,7 @@
     const opts = C.SORT_KEYS.map((k) => `<option value="${k}"${k === S.sortKey ? " selected" : ""}>${esc(t("sort_" + k))}</option>`).join("");
     const dir = S.sortDir === "asc" ? "desc" : "asc";
     return `<div class="sortrow"><select id="f-sort" data-set="sortKey" aria-label="${esc(t("sortBy"))}">${opts}</select>
-      ${S.sortKey === "default" ? "" : `<button class="btn dir" type="button" data-set="sortDir" data-v="${dir}">${S.sortDir === "asc" ? "↑ " + t("sortAsc") : "↓ " + t("sortDesc")}</button>`}</div>`;
+      ${S.sortKey === "default" ? "" : `<button class="btn dir" type="button" data-set="sortDir" data-v="${dir}">${S.sortDir === "asc" ? icon("up") + " " + t("sortAsc") : icon("down") + " " + t("sortDesc")}</button>`}</div>`;
   }
   function pageStrategies() {
     const cards = sortedStrategies().map(strat).map((s) => {
@@ -402,7 +411,7 @@
     return `${staleBanner()}
       <div class="card"><a href="#strategies" class="small" style="text-decoration:none">← ${t("strategies")}</a>
         <div class="card-head"><h1><span class="sw" style="background:${scolor(s.id)};width:14px;height:14px"></span>${esc(s.name[S.lang])}</h1>
-          ${id === S.plan ? `<span class="badge acc">★ ${t("isPlan")}</span>` : `<button class="btn" type="button" data-set="plan" data-v="${esc(id)}">★ ${t("setAsPlan")}</button>`}</div>
+          ${id === S.plan ? `<span class="badge acc">${icon("star")} ${t("isPlan")}</span>` : `<button class="btn" type="button" data-set="plan" data-v="${esc(id)}">${icon("star")} ${t("setAsPlan")}</button>`}</div>
         <p class="muted">${esc(s.description[S.lang])}</p>
         ${ctl([ceilingRow(), [t("riskStateLbl"), riskChip(e)]])}</div>
       <div class="stats">${statsCards}</div>
@@ -503,7 +512,7 @@
     const col = { total: (m) => m.total, sharpe: (m) => m.sharpe, mdd: (m) => -m.mdd, cagr: (m) => m.cagr, vol: (m) => m.vol };
     const cs = view.cmpSort;
     const order = cs.key && col[cs.key] ? C.sortIds(ms.map((x) => x.id), (id) => col[cs.key](ms.find((x) => x.id === id).m), cs.dir) : ms.map((x) => x.id);
-    const th = (k, txt, extra) => `<th class="n${extra ? " " + extra : ""}"><button type="button" class="th-sort" data-act="cmpsort" data-k="${k}" aria-sort="${cs.key === k ? (cs.dir === "asc" ? "ascending" : "descending") : "none"}">${txt}<span class="arrow">${cs.key === k ? (cs.dir === "asc" ? "↑" : "↓") : "↕"}</span></button></th>`;
+    const th = (k, txt, extra) => `<th class="n${extra ? " " + extra : ""}"><button type="button" class="th-sort" data-act="cmpsort" data-k="${k}" aria-sort="${cs.key === k ? (cs.dir === "asc" ? "ascending" : "descending") : "none"}">${txt}<span class="arrow">${icon(cs.key === k ? (cs.dir === "asc" ? "up" : "down") : "both")}</span></button></th>`;
     const rows = order.map((id) => ms.find((x) => x.id === id)).map(({ id, m }) => {
       return `<tr><td><span class="sw" style="background:${scolor(id)}"></span>${esc(sname(id))}</td><td class="n ${cls(m.total)}">${pct(m.total, 1, true)}</td>
         <td class="n">${fmtNum(m.sharpe)}</td><td class="n">${pct(-m.mdd)}</td><td class="n opt">${pct(m.cagr)}</td><td class="n opt">${pct(m.vol)}</td></tr>`;

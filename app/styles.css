@@ -107,6 +107,11 @@ textarea { width: 100%; min-height: 96px; font: .8rem/1.4 var(--f-mono); }
 .hrow-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 label.sub { display: grid; gap: 4px; font-size: .8rem; color: var(--muted); font-weight: 400; min-width: 0; }
 label.sub input { width: 100%; color: var(--fg); }
+/* iOS Safari gives date inputs an intrinsic minimum width and centred text, which pushes them
+   out of a grid cell; drop the native appearance so they size like the other inputs. */
+input[type=date] { -webkit-appearance: none; appearance: none; display: block; width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; min-height: 36px; text-align: left; }
+input[type=date]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+input[type=date]::-webkit-calendar-picker-indicator { margin-left: 4px; }
 .btn.add { width: 100%; border-style: dashed; }
 .btn2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .sortrow { display: flex; gap: 8px; width: 100%; min-width: 0; }

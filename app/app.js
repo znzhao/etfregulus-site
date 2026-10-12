@@ -80,32 +80,39 @@
   const label = (tk) => (tk === "CASH" ? esc(t("cash")) : `${esc(tk)} <span class="sn">${esc(aname(tk))}</span>`);
   const nextDay = () => C.nextSession(D.manifest.data_date, D.sessions);
 
-  /* asset colours: one hue family per asset class */
-  const CLASS_HUE = { broad_equity: 212, sector_equity: 190, treasury: 262, credit: 300, real_assets: 36, international: 150 };
-  function hslHex(h, s, l) {
-    s /= 100; l /= 100;
-    const k = (n) => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
-    const f = (n) => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1)))).toString(16).padStart(2, "0");
-    return "#" + f(0) + f(8) + f(4);
-  }
+  /* Colours. Strategies: six well-separated, muted hues that avoid the gain/loss red and green;
+     a lighter set for dark mode. ETFs: one family per asset class (US equity blues, sectors in
+     teal/sage/sand/plum, Treasuries in warm ambers, credit in greys, gold/commodities in ochre,
+     international in rose), fixed per ticker so a colour means the same ETF everywhere. */
+  const STRAT_COL = {
+    light: { spy_tlt_60_40: "#3f6cb5", momentum: "#e0882b", classical_optimizer: "#2b9a8c", equal_weight: "#8a64c4", spy_buy_hold: "#c4597a", cash: "#8c96a3" },
+    dark: { spy_tlt_60_40: "#7aa3e6", momentum: "#f0a75a", classical_optimizer: "#4fc4b2", equal_weight: "#b294e8", spy_buy_hold: "#e88aa6", cash: "#8b97a6" },
+  };
+  const ASSET_COL = {
+    SPY: "#3f6cb5", QQQ: "#6a93d6", IWM: "#9dbbe8",
+    XLK: "#2b9a8c", XLC: "#5fb8aa", XLY: "#8fcfc4", XLP: "#7f9f6b", XLE: "#a7c08f", XLF: "#c9a97a",
+    XLI: "#ddc59f", XLB: "#9b7aa8", XLV: "#bf9fcb", XLU: "#7c8fa8", XLRE: "#a9b7c9",
+    SHY: "#f2c48c", IEF: "#e9a35e", TLT: "#d27f3a", TIP: "#b8682f",
+    LQD: "#8d8f99", HYG: "#b7b9c2",
+    GLD: "#d4b04a", DBC: "#a3884a",
+    VEA: "#d9849b", VWO: "#b85d78",
+  };
+  const scolor = (id) => (isDark() ? STRAT_COL.dark : STRAT_COL.light)[id] || (strat(id) || {}).color || "#888888";
   function assetColor(tk) {
-    if (tk === "CASH") return css("--muted") || "#5a6774";
-    const a = D.assets[tk]; if (!a) return "#888888";
-    const same = D.universe.assets.filter((x) => x.asset_class === a.asset_class);
-    const k = same.indexOf(a), dark = isDark();
-    return hslHex((CLASS_HUE[a.asset_class] || 0) + k * 11, 42 + (k % 3) * 12, (dark ? 56 : 40) + (k % 4) * 7);
+    if (tk === "CASH") return isDark() ? "#4a5664" : "#cfd6de";
+    return ASSET_COL[tk] || "#9aa3ad";
   }
   const isDark = () => S.theme === "dark" || (S.theme === "system" && window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
 
   /* ------------------------------------------------------------------ small components */
-  function seg(kind, key, opts, cur) {
-    return `<span class="seg" role="group">${opts.map(([v, l]) =>
+  function seg(kind, key, opts, cur, extra) {
+    return `<span class="seg${extra ? " " + extra : ""}" role="group">${opts.map(([v, l]) =>
       `<button type="button" data-${kind}="${esc(key)}" data-v="${esc(v)}" aria-pressed="${String(cur) === String(v)}">${esc(l)}</button>`).join("")}</span>`;
   }
-  const ceilingSeg = (withLabel) => {
-    const s = seg("set", "ceiling", D.manifest.ceilings.map((c) => [c, c + "%"]), S.ceiling);
-    return withLabel ? `<span class="row" style="gap:8px"><span class="muted small">${t("ceiling")}</span>${s}</span>` : s;
-  };
+  const ceilingSeg = () => seg("set", "ceiling", D.manifest.ceilings.map((c) => [c, c + "%"]), S.ceiling);
+  /* Label / control rows on a two-column grid, so labels and controls line up on a phone. */
+  const ctl = (rows) => `<div class="ctl">${rows.map(([l, html]) => `<span class="lbl">${l}</span><div class="ctl-v">${html}</div>`).join("")}</div>`;
+  const ceilingRow = () => [t("ceiling"), ceilingSeg()];
   function spark(values, w = 120, h = 36) {
     if (!values || values.length < 2) return "";
     const lo = Math.min(...values), hi = Math.max(...values), sx = w / (values.length - 1);
@@ -187,7 +194,7 @@
   const coarse = () => !!(window.matchMedia && matchMedia("(pointer: coarse)").matches);
   let resizeTimer = null;
   window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => charts.forEach((c) => c.resize()), 120); });
-  const line = (name, data, color, extra) => Object.assign({ name, type: "line", data, showSymbol: false, lineStyle: { width: 1.6, color }, itemStyle: { color } }, extra || {});
+  const line = (name, data, color, extra) => Object.assign({ name, type: "line", data, showSymbol: false, lineStyle: { width: 1.5, color }, itemStyle: { color }, emphasis: { disabled: true } }, extra || {});
 
   /* ------------------------------------------------------------------ routing and shell */
   const PAGES = ["today", "strategies", "compare", "settings", "about"];
@@ -257,7 +264,7 @@
       <div class="card-head"><div style="display:grid;gap:4px;min-width:0"><span class="label">${t("myPlan")}</span>
         <label class="sr" style="display:flex;gap:8px;align-items:center"><select data-set="plan" aria-label="${esc(t("planStrategy"))}" style="font-family:var(--f-display);font-weight:700;font-size:1.15rem">${opts}</select></label></div>
         ${riskChip(e)}</div>
-      <div class="row">${ceilingSeg(true)}${seg("set", "mode", [["sim", t("modeSim")], ["real", t("modeReal")]], S.mode)}</div>
+      ${ctl([ceilingRow(), [t("holdingsMode"), seg("set", "mode", [["sim", t("modeSim")], ["real", t("modeReal")]], S.mode)]])}
     </div>`;
   }
   function statsRow(e, valueLabel, value) {
@@ -310,9 +317,12 @@
     if (!e || S.mode !== "sim") return;
     const data = Object.entries(e.weights).sort((a, b) => b[1] - a[1]).map(([k, w]) =>
       ({ name: labelText(k), value: +(w * 100).toFixed(1), itemStyle: { color: assetColor(k) } }));
+    const n = Object.keys(e.weights).filter((k) => k !== "CASH").length;
     mk("c-donut", { tooltip: { trigger: "item", confine: true, formatter: "{b}: {c}%" }, legend: { show: false },
-      series: [{ type: "pie", radius: ["52%", "82%"], avoidLabelOverlap: true, label: { show: false },
-        itemStyle: { borderColor: css("--surface"), borderWidth: 2 }, data }] });
+      title: { text: String(n), subtext: t("etfCount"), left: "center", top: "39%", itemGap: 2,
+        textStyle: { color: css("--fg"), fontSize: 26, fontFamily: css("--f-mono"), fontWeight: 500 }, subtextStyle: { color: css("--muted"), fontSize: 12 } },
+      series: [{ type: "pie", radius: ["58%", "86%"], avoidLabelOverlap: true, label: { show: false }, padAngle: 1.5,
+        itemStyle: { borderColor: css("--surface"), borderWidth: 2, borderRadius: 4 }, emphasis: { scale: true, scaleSize: 4 }, data }] });
   }
   function todayReal(e) {
     const hasAny = S.holdings.some((h) => h.sh > 0) || S.cash > 0;
@@ -348,9 +358,8 @@
   function sortBar() {
     const opts = C.SORT_KEYS.map((k) => `<option value="${k}"${k === S.sortKey ? " selected" : ""}>${esc(t("sort_" + k))}</option>`).join("");
     const dir = S.sortDir === "asc" ? "desc" : "asc";
-    return `<span class="row" style="gap:8px"><label class="muted small" for="f-sort">${t("sortBy")}</label>
-      <select id="f-sort" data-set="sortKey">${opts}</select>
-      ${S.sortKey === "default" ? "" : `<button class="btn" type="button" data-set="sortDir" data-v="${dir}" aria-label="${esc(t(S.sortDir === "asc" ? "sortAsc" : "sortDesc"))}">${S.sortDir === "asc" ? "↑ " + t("sortAsc") : "↓ " + t("sortDesc")}</button>`}</span>`;
+    return `<div class="sortrow"><select id="f-sort" data-set="sortKey" aria-label="${esc(t("sortBy"))}">${opts}</select>
+      ${S.sortKey === "default" ? "" : `<button class="btn dir" type="button" data-set="sortDir" data-v="${dir}">${S.sortDir === "asc" ? "↑ " + t("sortAsc") : "↓ " + t("sortDesc")}</button>`}</div>`;
   }
   function pageStrategies() {
     const cards = sortedStrategies().map(strat).map((s) => {
@@ -359,7 +368,7 @@
         .map(([k, w]) => `<span class="chip">${label(k)} ${pp(w)}</span>`).join("");
       const plan = s.id === S.plan;
       return `<a class="card ${plan ? "hl" : ""}" href="#s-${esc(s.id)}">
-        <div class="row between"><b><span class="sw" style="background:${esc(s.color)}"></span>${esc(s.name[S.lang])}</b>
+        <div class="row between"><b><span class="sw" style="background:${scolor(s.id)}"></span>${esc(s.name[S.lang])}</b>
           <span class="row" style="gap:6px">${plan ? `<span class="badge acc">${t("isPlan")}</span>` : ""}${e.risk_state !== "normal" ? riskChip(e) : ""}</span></div>
         <div class="row between" style="align-items:end"><div><div class="label">${t("ytd")}</div><div class="big ${cls(e.returns.ytd)}">${pct(e.returns.ytd, 1, true)}</div></div>${spark(e.spark)}</div>
         <div class="kv"><span>${t("d1")} <b class="${cls(e.returns.d1)}">${pct(e.returns.d1, 2, true)}</b></span><span>${t("y1")} <b class="${cls(e.returns.y1)}">${pct(e.returns.y1, 1, true)}</b></span>
@@ -367,8 +376,8 @@
         <div class="row" style="gap:6px">${top}</div>
         ${e.next_trades.length ? `<span class="muted small">${t("nextTrades")}: ${e.next_trades.length}</span>` : ""}</a>`;
     }).join("");
-    return `${staleBanner()}<div class="row between"><h1>${t("strategies")}</h1>${ceilingSeg(true)}</div>
-      <div class="row">${sortBar()}</div><div class="grid">${cards}</div>
+    return `${staleBanner()}<h1>${t("strategies")}</h1>
+      ${ctl([ceilingRow(), [t("sortBy"), sortBar()]])}<div class="grid">${cards}</div>
       <p class="muted small">${esc(t("metricsSince", { y: D.manifest.backtest_start.slice(0, 4), d: D.manifest.data_date }))}</p>`;
   }
 
@@ -382,7 +391,7 @@
     const benchOpts = [["", t("none")]].concat(D.manifest.strategies.filter((x) => x.id !== id).map((x) => [x.id, x.name[S.lang]]));
     const ctrl = view.tab === "cal"
       ? `<select data-view="calYear" aria-label="${esc(t("year"))}">${years.map((y) => `<option${Number(y) === view.calYear ? " selected" : ""}>${y}</option>`).join("")}</select>`
-      : seg("view", "range", RANGES.map((k) => [k, t("range")[k]]), view.range);
+      : seg("view", "range", RANGES.map((k) => [k, t("range")[k]]), view.range, "full");
     const statsCards = [[t("cagr"), pct(m.cagr)], [t("sharpe"), fmtNum(m.sharpe)], [t("maxdd"), pct(-m.max_drawdown)], [t("vol"), pct(m.volatility)]]
       .map(([k, v]) => `<div class="stat"><span class="label">${k}</span><span class="v">${v}</span></div>`).join("");
     const holdNow = Object.entries(e.current_weights).sort((x, y) => y[1] - x[1]).map(([k, w]) =>
@@ -392,13 +401,13 @@
       `<span class="chip"><span class="${c.to > c.from ? "up" : "down"}">${c.to > c.from ? "+" : "−"}</span>${label(c.ticker)} ${pp(c.from)}→${pp(c.to)}</span>`).join(" ")}</td></tr>`).join("");
     return `${staleBanner()}
       <div class="card"><a href="#strategies" class="small" style="text-decoration:none">← ${t("strategies")}</a>
-        <div class="card-head"><h1><span class="sw" style="background:${esc(s.color)};width:14px;height:14px"></span>${esc(s.name[S.lang])}</h1>
+        <div class="card-head"><h1><span class="sw" style="background:${scolor(s.id)};width:14px;height:14px"></span>${esc(s.name[S.lang])}</h1>
           ${id === S.plan ? `<span class="badge acc">★ ${t("isPlan")}</span>` : `<button class="btn" type="button" data-set="plan" data-v="${esc(id)}">★ ${t("setAsPlan")}</button>`}</div>
         <p class="muted">${esc(s.description[S.lang])}</p>
-        <div class="row">${ceilingSeg(true)}${riskChip(e)}</div></div>
+        ${ctl([ceilingRow(), [t("riskStateLbl"), riskChip(e)]])}</div>
       <div class="stats">${statsCards}</div>
       <div class="card">
-        <div class="row between">${seg("view", "tab", tabs, view.tab)}${ctrl}</div>
+        <div class="chart-ctl">${seg("view", "tab", tabs, view.tab, "full")}${ctrl}</div>
         ${view.tab === "equity" ? `<label class="row small muted">${t("benchmark")} <select data-view="bench">${benchOpts.map(([v, l]) => `<option value="${esc(v)}"${view.bench === v ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></label>` : ""}
         ${view.tab === "cal" ? `<div class="cal-wrap"><div id="c-main" class="chart"></div></div>` : `<div id="c-main" class="chart"></div>`}
         <p class="muted small">${view.tab === "equity" ? t("growth") : view.tab === "dd" ? t("ddChartNote") : ""}</p>
@@ -440,7 +449,9 @@
         const map = new Map(bt.dates.map((d, i) => [d, i]));
         return X.map((d) => { const i = map.get(d); return i == null || i < i0 ? null : +((bt.equity[i] / base) * 10000).toFixed(0); });
       };
-      const series = [line(s.name[S.lang], norm(b), s.color)];
+      const col = scolor(id);
+      const series = [line(s.name[S.lang], norm(b), col, { lineStyle: { width: 1.6, color: col },
+        areaStyle: { origin: "start", color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: hexA(col, 0.28) }, { offset: 1, color: hexA(col, 0.02) }]) } })];
       if (bb) series.push(line(sname(view.bench), norm(bb), css("--muted"), { lineStyle: { width: 1.2, color: css("--muted"), type: "dashed" } }));
       mk("c-main", { xAxis: { type: "category", data: X, boundaryGap: false }, yAxis: { type: "value", scale: true, axisLabel: { formatter: (v) => Math.round(v).toLocaleString(locale()) } },
         tooltip: { valueFormatter: (v) => (v == null ? "—" : money(v)) }, series });
@@ -462,7 +473,7 @@
       const dates = w.dates.slice(k0), vals = w.values.slice(k0);
       const series = w.assets.map((tk, j) => ({ tk, j, max: Math.max(...vals.map((r) => r[j])) })).filter((x) => x.max > 0.001)
         .map(({ tk, j }) => ({ name: labelText(tk), type: "line", stack: "w", showSymbol: false, lineStyle: { width: 0 },
-          areaStyle: { color: assetColor(tk), opacity: 0.95 }, itemStyle: { color: assetColor(tk) }, emphasis: { focus: "series" },
+          lineStyle: { width: 0.6, color: css("--surface") }, areaStyle: { color: assetColor(tk), opacity: 1 }, itemStyle: { color: assetColor(tk) }, emphasis: { focus: "series" },
           data: vals.map((r) => +(r[j] * 100).toFixed(1)) }));
       mk("c-main", { legend: { type: "scroll", top: 0 }, grid: { left: 10, right: 26, top: 34, bottom: 8, containLabel: true },
         tooltip: { valueFormatter: (v) => v + "%", order: "valueDesc" },
@@ -487,23 +498,23 @@
   /* ------------------------------------------------------------------ Compare */
   function pageCompare(bts) {
     const chips = D.manifest.strategies.map((s) => `<label class="chip" style="cursor:pointer;font-family:var(--f-body);display:inline-flex;align-items:center;gap:6px">
-      <input type="checkbox" data-cmp="${esc(s.id)}"${view.cmp.includes(s.id) ? " checked" : ""}><span class="sw" style="background:${esc(s.color)};margin:0"></span>${esc(s.name[S.lang])}</label>`).join("");
+      <input type="checkbox" data-cmp="${esc(s.id)}"${view.cmp.includes(s.id) ? " checked" : ""}><span class="sw" style="background:${scolor(s.id)};margin:0"></span>${esc(s.name[S.lang])}</label>`).join("");
     const ms = bts.map((b, k) => ({ id: view.cmp[k], m: C.metrics(b.equity, C.rangeStart(b.dates, view.cmpRange)) }));
     const col = { total: (m) => m.total, sharpe: (m) => m.sharpe, mdd: (m) => -m.mdd, cagr: (m) => m.cagr, vol: (m) => m.vol };
     const cs = view.cmpSort;
     const order = cs.key && col[cs.key] ? C.sortIds(ms.map((x) => x.id), (id) => col[cs.key](ms.find((x) => x.id === id).m), cs.dir) : ms.map((x) => x.id);
-    const th = (k, txt) => `<th class="n"><button type="button" class="th-sort" data-act="cmpsort" data-k="${k}" aria-sort="${cs.key === k ? (cs.dir === "asc" ? "ascending" : "descending") : "none"}">${txt}<span class="arrow">${cs.key === k ? (cs.dir === "asc" ? "↑" : "↓") : "↕"}</span></button></th>`;
+    const th = (k, txt, extra) => `<th class="n${extra ? " " + extra : ""}"><button type="button" class="th-sort" data-act="cmpsort" data-k="${k}" aria-sort="${cs.key === k ? (cs.dir === "asc" ? "ascending" : "descending") : "none"}">${txt}<span class="arrow">${cs.key === k ? (cs.dir === "asc" ? "↑" : "↓") : "↕"}</span></button></th>`;
     const rows = order.map((id) => ms.find((x) => x.id === id)).map(({ id, m }) => {
-      return `<tr><td><span class="sw" style="background:${esc(strat(id).color)}"></span>${esc(sname(id))}</td><td class="n ${cls(m.total)}">${pct(m.total, 1, true)}</td>
-        <td class="n">${fmtNum(m.sharpe)}</td><td class="n">${pct(-m.mdd)}</td><td class="n">${pct(m.cagr)}</td><td class="n">${pct(m.vol)}</td></tr>`;
+      return `<tr><td><span class="sw" style="background:${scolor(id)}"></span>${esc(sname(id))}</td><td class="n ${cls(m.total)}">${pct(m.total, 1, true)}</td>
+        <td class="n">${fmtNum(m.sharpe)}</td><td class="n">${pct(-m.mdd)}</td><td class="n opt">${pct(m.cagr)}</td><td class="n opt">${pct(m.vol)}</td></tr>`;
     }).join("");
-    return `${staleBanner()}<div class="row between"><h1>${t("compare")}</h1>${ceilingSeg(true)}</div>
+    return `${staleBanner()}<h1>${t("compare")}</h1>
       <div class="card"><span class="label">${t("pick")}</span><div class="row" style="gap:6px">${chips}</div>
-        ${seg("view", "cmpRange", RANGES.map((k) => [k, t("range")[k]]), view.cmpRange)}</div>
+        ${ctl([ceilingRow(), [t("rangeLbl"), seg("view", "cmpRange", RANGES.map((k) => [k, t("range")[k]]), view.cmpRange)]])}</div>
       ${bts.length ? `<div class="card"><h3>${t("growthCompare")}</h3><div id="c-ceq" class="chart"></div></div>
       <div class="grid2"><div class="card"><h3>${t("tab_dd")}</h3><div id="c-cdd" class="chart sm"></div><p class="muted small">${t("ddChartNote")}</p></div>
         <div class="card"><h3>${t("rolling")}</h3><div id="c-crs" class="chart sm"></div></div></div>
-      <div class="card"><h3>${t("metricsRange")}</h3><div class="tbl"><table><thead><tr><th></th>${th("total", t("totalRet"))}${th("sharpe", t("sharpe"))}${th("mdd", t("maxdd"))}${th("cagr", t("cagr"))}${th("vol", t("vol"))}</tr></thead><tbody>${rows}</tbody></table></div></div>`
+      <div class="card"><h3>${t("metricsRange")}</h3><div class="tbl"><table><thead><tr><th></th>${th("total", t("totalRet"))}${th("sharpe", t("sharpe"))}${th("mdd", t("maxdd"))}${th("cagr", t("cagr"), "opt")}${th("vol", t("vol"), "opt")}</tr></thead><tbody>${rows}</tbody></table></div></div>`
         : `<div class="card"><p class="muted">${t("atLeastOne")}</p></div>`}`;
   }
   function drawCompare(bts) {
@@ -511,10 +522,10 @@
     const ref = bts[0], a = C.rangeStart(ref.dates, view.cmpRange), X = ref.dates.slice(a);
     const align = (b, f) => { const map = new Map(b.dates.map((d, i) => [d, i])); return X.map((d) => { const i = map.get(d); return i == null ? null : f(b, i); }); };
     const eqS = bts.map((b, k) => { const id = view.cmp[k], i0 = C.indexOnOrAfter(b.dates, X[0]);
-      return line(sname(id), align(b, (bb, i) => +((bb.equity[i] / bb.equity[i0]) * 10000).toFixed(0)), strat(id).color); });
+      return line(sname(id), align(b, (bb, i) => +((bb.equity[i] / bb.equity[i0]) * 10000).toFixed(0)), scolor(id)); });
     mk("c-ceq", { xAxis: { type: "category", data: X, boundaryGap: false }, yAxis: { type: "value", scale: true }, tooltip: { valueFormatter: (v) => (v == null ? "—" : money(v)) }, series: eqS });
     mk("c-cdd", { xAxis: { type: "category", data: X, boundaryGap: false }, yAxis: { type: "value", max: 0, axisLabel: { formatter: (v) => v + "%" } }, tooltip: { valueFormatter: (v) => v + "%" },
-      series: bts.map((b, k) => line(sname(view.cmp[k]), align(b, (bb, i) => -(bb.dd12[i] * 100).toFixed(2)), strat(view.cmp[k]).color, Object.assign({ lineStyle: { width: 1.2, color: strat(view.cmp[k]).color } },
+      series: bts.map((b, k) => line(sname(view.cmp[k]), align(b, (bb, i) => -(bb.dd12[i] * 100).toFixed(2)), scolor(view.cmp[k]), Object.assign({ lineStyle: { width: 1.4, color: scolor(view.cmp[k]) } },
         k === 0 ? { markLine: { symbol: 'none', silent: true, label: { formatter: t('ceiling') + ' ' + S.ceiling + '%', color: css('--warn'), position: 'insideStartTop' },
           lineStyle: { color: css('--warn'), type: 'dashed' }, data: [{ yAxis: -S.ceiling }] } } : {}))) });
     const from = Math.max(a, 252), X2 = ref.dates.slice(from);
@@ -522,7 +533,7 @@
       series: bts.map((b, k) => {
         const rs = C.rollingSharpe(b.equity, 252, C.indexOnOrAfter(b.dates, X2[0] || b.dates[0]));
         const start = b.dates.length - rs.length, map = new Map(b.dates.map((d, i) => [d, i]));
-        return line(sname(view.cmp[k]), X2.map((d) => { const i = map.get(d); return i == null || i < start ? null : +rs[i - start].toFixed(2); }), strat(view.cmp[k]).color, { lineStyle: { width: 1.2, color: strat(view.cmp[k]).color } });
+        return line(sname(view.cmp[k]), X2.map((d) => { const i = map.get(d); return i == null || i < start ? null : +rs[i - start].toFixed(2); }), scolor(view.cmp[k]), { lineStyle: { width: 1.4, color: scolor(view.cmp[k]) } });
       }) });
   }
 
@@ -539,7 +550,7 @@
     return `<h1>${t("settings")}</h1><p class="muted">${t("settingsPrivacy")}</p>
       <div class="card form">
         <div class="field"><label for="f-plan">${t("planStrategy")}</label><select id="f-plan" data-set="plan">${opts}</select></div>
-        <div class="field"><span class="lbl">${t("ceiling")}</span>${ceilingSeg(false)}</div>
+        <div class="field"><span class="lbl">${t("ceiling")}</span>${ceilingSeg()}</div>
         <div class="field"><span class="lbl">${t("holdingsMode")}</span>${seg("set", "mode", [["sim", t("modeSim")], ["real", t("modeReal")]], S.mode)}</div>
         ${S.mode === "sim"
           ? `<div class="field"><label for="f-amount">${t("amount")} (USD)</label><input id="f-amount" type="number" inputmode="decimal" min="0" step="100" value="${S.amount}" data-save="amount"><span class="hint">${t("amountHint")}</span></div>`
@@ -565,7 +576,7 @@
     return `<h1>${t("about")}</h1>
       <div class="card"><h2>${t("aboutWhat")}</h2><p>${t("aboutWhatText")}</p></div>
       <div class="card"><h2>${t("rules")}</h2><ul class="plain">${t("rulesList").map((x) => `<li>${esc(x)}</li>`).join("")}</ul><div class="alert small">${t("caveat")}</div></div>
-      <div class="card"><h2>${t("strategiesAbout")}</h2><div class="tbl"><table><tbody>${m.strategies.map((s) => `<tr><td><span class="sw" style="background:${esc(s.color)}"></span><b>${esc(s.name[S.lang])}</b></td><td style="white-space:normal">${esc(s.description[S.lang])}</td></tr>`).join("")}</tbody></table></div></div>
+      <div class="card"><h2>${t("strategiesAbout")}</h2><div class="tbl"><table><tbody>${m.strategies.map((s) => `<tr><td><span class="sw" style="background:${scolor(s.id)}"></span><b>${esc(s.name[S.lang])}</b></td><td style="white-space:normal">${esc(s.description[S.lang])}</td></tr>`).join("")}</tbody></table></div></div>
       <div class="card"><h2>${t("data")}</h2><p>${t("dataText")}</p></div>
       <div class="card"><h2>${t("pipeline")}</h2><div class="tbl"><table><tbody>
         <tr><td>${t("status")}</td><td>${f === "ok" ? `<span class="badge ok">${t("fresh")}</span>` : `<span class="badge bad">${t(f)}</span>`}${m.last_attempt.message ? ` <span class="muted small">${esc(m.last_attempt.message)}</span>` : ""}</td></tr>

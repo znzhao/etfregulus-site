@@ -8,8 +8,8 @@ name: Daily update
 
 on:
   schedule:
-    - cron: "30 22 * * 1-5"   # 22:30 UTC, after the close in both EDT and EST
-    - cron: "30 2 * * 2-6"    # second attempt, in case the first one failed or the data was late
+    - cron: "30 22 * * 1-5"   # 22:30 UTC = 18:30 EDT / 17:30 EST, after the 16:00 ET close (cron is UTC-only)
+    - cron: "30 2 * * 2-6"    # 22:30 EDT / 21:30 EST: second attempt, in case the first one failed or the data was late
   workflow_dispatch:
   push:
     branches: [main]

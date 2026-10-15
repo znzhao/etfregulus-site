@@ -34,6 +34,14 @@
     return new Intl.NumberFormat(locale(), { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(x);
   }
   const fmtNum = (x, d = 2) => (isFinite(x) ? Number(x).toLocaleString(locale(), { minimumFractionDigits: d, maximumFractionDigits: d }) : "—");
+  // Timestamps are shown in US Eastern time (the market's clock), e.g. "2026-10-15 18:30 EDT".
+  const fmtET = (iso) => {
+    const d = iso ? new Date(iso) : null;
+    if (!d || isNaN(d)) return "—";
+    const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", year: "numeric", month: "2-digit",
+      day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZoneName: "short" }).formatToParts(d).map((x) => [x.type, x.value]));
+    return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute} ${p.timeZoneName}`;
+  };
   const intFmt = (x) => Number(x).toLocaleString(locale());
   const cls = (x) => (x > 0 ? "up" : x < 0 ? "down" : "");
   const md = (d) => (d ? d.slice(5) : "");
@@ -593,8 +601,8 @@
       <div class="card"><h2>${t("pipeline")}</h2><div class="tbl"><table><tbody>
         <tr><td>${t("status")}</td><td>${f === "ok" ? `<span class="badge ok">${t("fresh")}</span>` : `<span class="badge bad">${t(f)}</span>`}${m.last_attempt.message ? ` <span class="muted small">${esc(m.last_attempt.message)}</span>` : ""}</td></tr>
         <tr><td>${t("dataAsOf")}</td><td class="num">${esc(m.data_date)}</td></tr>
-        <tr><td>${t("lastRun")}</td><td class="num">${esc(m.generated_at.replace("T", " ").replace("Z", " UTC"))}</td></tr>
-        <tr><td>${t("nextRun")}</td><td class="num">${esc((m.next_run || "—").replace("T", " ").replace("Z", " UTC"))}</td></tr>
+        <tr><td>${t("lastRun")}</td><td class="num">${esc(fmtET(m.generated_at))}</td></tr>
+        <tr><td>${t("nextRun")}</td><td class="num">${esc(fmtET(m.next_run))}</td></tr>
         <tr><td>${t("codeVersion")}</td><td class="num"><a href="https://github.com/${esc(m.code.repo)}/tree/${esc(m.code.commit)}" target="_blank" rel="noopener">${esc(m.code.tag || m.code.commit)}</a></td></tr>
         <tr><td>${t("config")}</td><td class="num">${esc(m.config.name)} · ${esc(m.config.hash)}</td></tr></tbody></table></div></div>
       <div class="alert">${t("disclaimer")}</div>`;

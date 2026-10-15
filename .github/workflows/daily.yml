@@ -62,6 +62,27 @@ jobs:
             [ "$attempt" = 3 ] && exit 1
           done
 
+      - name: Trim to the last session every symbol has
+        # Right after the close Yahoo sometimes has today's bar for most ETFs but not all
+        # (seen with XLC and XLRE), which Stage 2 rejects as a gap. Drop that partial day;
+        # the next run picks it up.
+        working-directory: engine
+        run: |
+          python - <<'PY'
+          import glob, pandas as pd
+          files = glob.glob("data/raw/prices/*.parquet")
+          frames = {f: pd.read_parquet(f) for f in files}
+          last = {f: d.index.max() for f, d in frames.items()}
+          common, newest = min(last.values()), max(last.values())
+          if newest - common > pd.Timedelta(days=5):
+              print(f"not trimming: latest dates span {common.date()}..{newest.date()}")
+          else:
+              for f, d in frames.items():
+                  if last[f] > common:
+                      d[d.index <= common].to_parquet(f)
+                      print(f"trimmed {f} to {common.date()}")
+          PY
+
       - name: Curate (Stage 2)
         working-directory: engine
         run: python -m scripts.s02_curate_data --allow-missing-macro

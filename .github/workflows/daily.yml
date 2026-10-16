@@ -88,6 +88,8 @@ jobs:
           # A fresh bar is sometimes inconsistent (open outside [low, high]) until the vendor
           # revises it; Stage 2 rejects that. Drop the newest day everywhere and wait.
           def bad(d):
+              if not {"open_raw", "high_raw", "low_raw", "close_raw"} <= set(d.columns):
+                  return False
               r = d.iloc[-1]
               tol = 1e-6 * max(abs(r["high_raw"]), 1.0)
               return not (r["low_raw"] - tol <= r["open_raw"] <= r["high_raw"] + tol

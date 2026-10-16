@@ -186,7 +186,7 @@
   /* ---------------------------------------------------------------- settings */
   const DEFAULTS = {
     lang: "zh", theme: "system", updown: "red-up", plan: "spy_tlt_60_40", ceiling: 5, maxEtf: 0, mode: "sim",
-    amount: 10000, cash: 0, holdings: [], sortKey: "default", sortDir: "desc"
+    amount: 10000, cash: 0, peak: 0, holdings: [], sortKey: "default", sortDir: "desc"
   };
 
   /** Strategy sort keys offered on the Strategies page. */
@@ -228,6 +228,7 @@
     const num = (v, d) => { const n = Number(v); return isFinite(n) && n >= 0 ? Math.min(n, 1e12) : d; };
     s.amount = num(x.amount, s.amount);
     s.cash = num(x.cash, s.cash);
+    s.peak = num(x.peak, s.peak);
     s.holdings = Array.isArray(x.holdings) ? x.holdings
       .filter((h) => h && typeof h.t === "string" && /^[A-Z]{1,5}$/.test(h.t))
       .map((h) => ({ t: h.t, sh: num(h.sh, 0), d: isValidDate(h.d) ? h.d : "" }))

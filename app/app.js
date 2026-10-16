@@ -270,7 +270,14 @@
       } else if (r.page === "strategies") app.innerHTML = pageStrategies();
       else if (r.page === "settings") app.innerHTML = pageSettings();
       else if (r.page === "about") app.innerHTML = pageAbout();
-      else { app.innerHTML = pageToday(); drawToday(); }
+      else {
+        if (useRL()) {
+          app.innerHTML = loadingCard();
+          await loadRL();
+          if (token !== renderToken) return;
+        }
+        app.innerHTML = pageToday(); drawToday();
+      }
     } catch (e) {
       if (token === renderToken) app.innerHTML = errorCard(e);
       console.error(e);
@@ -284,7 +291,7 @@
       ${ctl([[t("myPlan"), `<select class="plan-sel" data-set="plan" aria-label="${esc(t("planStrategy"))}">${opts}</select>`],
         ceilingRow(), ...maxEtfRows(),
         [t("holdingsMode"), seg("set", "mode", [["sim", t("modeSim")], ["real", t("modeReal")]], S.mode)],
-        [t("riskStateLbl"), riskChip(e)]])}
+        ...(useRL() ? [] : [[t("riskStateLbl"), riskChip(e)]])])}
     </div>`;
   }
   function statsRow(e, valueLabel, value) {
@@ -344,11 +351,44 @@
       series: [{ type: "pie", radius: ["58%", "86%"], avoidLabelOverlap: true, label: { show: false }, padAngle: 1.5,
         itemStyle: { borderColor: css("--surface"), borderWidth: 2, borderRadius: 4 }, emphasis: { scale: true, scaleSize: 4 }, data }] });
   }
+  /* The RL model decides on the user's own book (app/rl.js) instead of copying its
+     simulated target: real-holdings mode with the RL strategy, when the data carries it. */
+  const useRL = () => S.mode === "real" && S.plan === "rl" && !!D.manifest.files.rl;
+  async function loadRL() {
+    if (!D.rl) [D.rl, D.risk] = await Promise.all([getJSON(D.manifest.files.rl), getJSON(D.manifest.files.risk)]);
+  }
+  function todayRealRL(e, prices, nd) {
+    const p = RL.userPlan(D.rl, D.risk, { holdings: S.holdings, cash: S.cash, peak: S.peak, prices,
+      hold_days: D.manifest.lock_days, ceiling: S.ceiling, max_holdings: S.maxEtf });
+    if (p.nav > (S.peak || 0)) { S.peak = Math.round(p.nav * 100) / 100; save(); }  // a new 12-month high
+    const tk = D.rl.tickers;
+    const rows = tk.map((t0, j) => ({ t: t0, sh: p.current[j], tsh: p.shares[j], px: prices[t0], rem: p.remaining[j] }))
+      .filter((r) => r.sh > 0 || r.tsh > 0)
+      .sort((a, b) => b.tsh * b.px - a.tsh * a.px || a.t.localeCompare(b.t))
+      .map((r) => {
+        const trade = r.tsh - r.sh, side = trade > 0 ? "buy" : trade < 0 ? "sell" : "hold";
+        const sellable = r.rem > 0 ? C.firstSessionOnOrAfter(C.addDays(D.manifest.data_date, r.rem), D.sessions) : null;
+        return `<div class="trade r3"><span class="side ${side === "hold" ? "keep" : side}">${t(side)}${trade ? " " + intFmt(Math.abs(trade)) : ""}</span><span class="num">${esc(r.t)}</span>
+          <span class="small" style="min-width:0;display:grid;gap:2px"><span class="muted">${esc(aname(r.t))}</span>
+            <span><span class="num">${intFmt(r.sh)} → ${intFmt(r.tsh)}</span> ${t("sharesUnit")} · <span class="num">${money(r.tsh * r.px)}</span></span>
+            ${sellable ? `<span><span class="badge acc">${esc(t("sellableFrom", { d: md(sellable) }))}</span></span>` : ""}</span></div>`;
+      }).join("");
+    const pct = (x) => (x * 100).toFixed(1) + "%";
+    return statsRow(e, t("value"), p.nav) + `<p class="muted small">${t("realStatsNote")}</p><div class="card">
+      <div class="card-head"><h2>${t("realTitle")}</h2><span class="muted small">${esc(t("executesOn", { d: nd }))}</span></div>
+      <p class="muted small">${t("rlRealNote")}</p>
+      <div class="ctl"><span class="lbl">${t("rlMyDrawdown")}</span><div class="ctl-v"><span class="num">${pct(p.drawdown)}</span>&nbsp; <span class="muted small">${esc(t("rlFromPeak", { v: money(p.peak) }))}</span></div>
+        <span class="lbl">${t("riskStateLbl")}</span><div class="ctl-v">${riskChip({ risk_state: p.riskState })}</div></div>
+      <div>${rows || `<p class="muted">${t("noTrades")}</p>`}</div>
+      <div class="row between" style="border-top:1px solid var(--line);padding-top:10px"><b>${t("cashAfter")}</b><span class="num">${money(p.cashAfter)}</span></div>
+      <p class="muted small">${esc(t("estimatedAt", { d: D.manifest.data_date }))} · ${t("relock")}</p></div>`;
+  }
   function todayReal(e) {
     const hasAny = S.holdings.some((h) => h.sh > 0) || S.cash > 0;
     if (!hasAny) return `<div class="card center"><p>${t("realEmpty")}</p><a class="btn primary" href="#settings">${t("goSettings")}</a></div>`;
     const prices = {}; for (const a of D.universe.assets) prices[a.ticker] = a.close;
     const nd = nextDay();
+    if (useRL() && D.rl) return todayRealRL(e, prices, nd);
     const p = C.realPlan({ holdings: S.holdings, cash: S.cash, target: e.weights, prices, nextDay: nd, lockDays: D.manifest.lock_days, sessions: D.sessions });
     const rows = p.rows.map((r) => {
       const side = r.trade > 0 ? "buy" : r.trade < 0 ? "sell" : "hold";
@@ -578,6 +618,7 @@
         ${S.mode === "sim"
           ? `<div class="field"><label for="f-amount">${t("amount")} (USD)</label><input id="f-amount" type="number" inputmode="decimal" min="0" step="100" value="${S.amount}" data-save="amount"><span class="hint">${t("amountHint")}</span></div>`
           : `<div class="field"><label for="f-cash">${t("cash")} (USD)</label><input id="f-cash" type="number" inputmode="decimal" min="0" step="100" value="${S.cash}" data-save="cash"><span class="hint">${t("cashHint")}</span></div>
+            <div class="field"><label for="f-peak">${t("peak12m")} (USD)</label><input id="f-peak" type="number" inputmode="decimal" min="0" step="100" value="${S.peak || ""}" data-save="peak"><span class="hint">${t("peak12mHint")}</span></div>
              <div class="field"><span class="lbl">${t("myHoldings")}</span><span class="hint">${t("holdingsHint")}</span>
                ${rows || `<p class="muted small">${t("noRows")}</p>`}
                <button class="btn add" type="button" data-act="hadd">+ ${t("addRow")}</button></div>`}
@@ -697,6 +738,9 @@
     app.innerHTML = loadingCard();
     try {
       await loadCore();
+      // Settings were first cleaned without the manifest; clean the stored ones again
+      // against it, so a choice only the data defines (e.g. the holdings limit) survives.
+      S = C.sanitizeSettings(readStore() || S, D.manifest);
       save();
       render();
     } catch (e) {

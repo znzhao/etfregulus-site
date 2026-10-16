@@ -97,13 +97,13 @@
     ? '<svg class="ic" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M6 1.2l1.45 2.95 3.25.47-2.35 2.3.55 3.24L6 8.63 3.1 10.16l.55-3.24L1.3 4.62l3.25-.47z" fill="currentColor"/></svg>'
     : `<svg class="ic" viewBox="0 0 10 12" width="10" height="12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${ICON_PATH[k]}</svg>`;
 
-  /* Colours. Strategies: six well-separated, muted hues that avoid the gain/loss red and green;
+  /* Colours. Strategies: seven well-separated, muted hues that avoid the gain/loss red and green;
      a lighter set for dark mode. ETFs: one family per asset class (US equity blues, sectors in
      teal/sage/sand/plum, Treasuries in warm ambers, credit in greys, gold/commodities in ochre,
      international in rose), fixed per ticker so a colour means the same ETF everywhere. */
   const STRAT_COL = {
-    light: { spy_tlt_60_40: "#3f6cb5", momentum: "#e0882b", classical_optimizer: "#2b9a8c", equal_weight: "#8a64c4", spy_buy_hold: "#c4597a", cash: "#8c96a3" },
-    dark: { spy_tlt_60_40: "#7aa3e6", momentum: "#f0a75a", classical_optimizer: "#4fc4b2", equal_weight: "#b294e8", spy_buy_hold: "#e88aa6", cash: "#8b97a6" },
+    light: { rl: "#3d3a8c", spy_tlt_60_40: "#3f6cb5", momentum: "#e0882b", classical_optimizer: "#2b9a8c", equal_weight: "#8a64c4", spy_buy_hold: "#c4597a", cash: "#8c96a3" },
+    dark: { rl: "#a9a5f2", spy_tlt_60_40: "#7aa3e6", momentum: "#f0a75a", classical_optimizer: "#4fc4b2", equal_weight: "#b294e8", spy_buy_hold: "#e88aa6", cash: "#8b97a6" },
   };
   const ASSET_COL = {
     SPY: "#3f6cb5", QQQ: "#6a93d6", IWM: "#9dbbe8",

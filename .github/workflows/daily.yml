@@ -53,11 +53,14 @@ jobs:
       - name: Install
         run: pip install -r engine/requirements-publish.txt
 
-      - name: Fetch prices (Stage 1)
+      - name: Fetch prices and FRED macro (Stage 1)
+        # The RL model reads macro features, so FRED is fetched too (secret FRED_API_KEY).
         working-directory: engine
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: |
           for attempt in 1 2 3; do
-            python -m scripts.s01_fetch_data --skip-fred && break
+            python -m scripts.s01_fetch_data && break
             echo "fetch failed (attempt $attempt), retrying in 60s"; sleep 60
             [ "$attempt" = 3 ] && exit 1
           done
@@ -85,7 +88,11 @@ jobs:
 
       - name: Curate (Stage 2)
         working-directory: engine
-        run: python -m scripts.s02_curate_data --allow-missing-macro
+        run: python -m scripts.s02_curate_data
+
+      - name: Features (Stage 3)
+        working-directory: engine
+        run: python -m scripts.s03_build_features --fold 2025
 
       - name: Build site data (Stage 15)
         working-directory: engine

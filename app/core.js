@@ -185,7 +185,7 @@
 
   /* ---------------------------------------------------------------- settings */
   const DEFAULTS = {
-    lang: "zh", theme: "system", updown: "red-up", plan: "spy_tlt_60_40", ceiling: 5, mode: "sim",
+    lang: "zh", theme: "system", updown: "red-up", plan: "spy_tlt_60_40", ceiling: 5, maxEtf: 0, mode: "sim",
     amount: 10000, cash: 0, holdings: [], sortKey: "default", sortDir: "desc"
   };
 
@@ -222,6 +222,9 @@
     const ceil = Number(x.ceiling);
     const ceilings = manifest ? manifest.ceilings : [5, 10, 15];
     s.ceiling = ceilings.includes(ceil) ? ceil : (ceilings.includes(s.ceiling) ? s.ceiling : ceilings[0]);
+    const maxEtf = Number(x.maxEtf);
+    const limits = manifest && manifest.holdings ? manifest.holdings : [0];
+    s.maxEtf = limits.includes(maxEtf) ? maxEtf : (limits.includes(0) ? 0 : limits[0]);
     const num = (v, d) => { const n = Number(v); return isFinite(n) && n >= 0 ? Math.min(n, 1e12) : d; };
     s.amount = num(x.amount, s.amount);
     s.cash = num(x.cash, s.cash);

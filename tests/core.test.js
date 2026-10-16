@@ -155,6 +155,11 @@ test("settings are sanitized against the manifest", () => {
   assert.deepEqual(s.holdings, [{ t: "SPY", sh: 3, d: "" }]);
   assert.deepEqual(C.sanitizeSettings(null, man).plan, "momentum");
   assert.deepEqual(C.sanitizeSettings({ ceiling: 7 }, man).ceiling, 5);
+  // The holdings limit: only values the data offers; no limit (0) without a `holdings` list.
+  assert.equal(C.sanitizeSettings({ maxEtf: "3" }, man).maxEtf, 0);
+  const withK = Object.assign({ holdings: [0, 3, 5, 8] }, man);
+  assert.equal(C.sanitizeSettings({ maxEtf: "5" }, withK).maxEtf, 5);
+  assert.equal(C.sanitizeSettings({ maxEtf: 4 }, withK).maxEtf, 0);
 });
 
 test("every ETF has a short name in both languages", () => {

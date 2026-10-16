@@ -79,7 +79,7 @@
   }
   const strat = (id) => D.manifest.strategies.find((s) => s.id === id);
   const sname = (id) => { const s = strat(id); return s ? s.name[S.lang] : id; };
-  const pidOf = (id, c = S.ceiling) => id + "_D" + c;
+  const pidOf = (id, c = S.ceiling, k = S.maxEtf) => id + "_D" + c + (k ? "_K" + k : "");
   const entry = (id, c) => D.today.portfolios[pidOf(id, c)];
   const price = (tk) => (D.assets[tk] ? D.assets[tk].close : NaN);
   /* Every ETF is shown with a short name next to its ticker (falls back to the data's name). */
@@ -130,6 +130,9 @@
   /* Label / control rows on a two-column grid, so labels and controls line up on a phone. */
   const ctl = (rows) => `<div class="ctl">${rows.map(([l, html]) => `<span class="lbl">${l}</span><div class="ctl-v">${html}</div>`).join("")}</div>`;
   const ceilingRow = () => [t("ceiling"), ceilingSeg()];
+  /* The holdings limit ("at most n ETFs"): shown only when the data offers more than one. */
+  const maxEtfSeg = () => seg("set", "maxEtf", (D.manifest.holdings || [0]).map((k) => [k, k ? k + t("maxEtfUnit") : t("maxEtfAll")]), S.maxEtf);
+  const maxEtfRows = () => ((D.manifest.holdings || [0]).length > 1 ? [[t("maxEtf"), maxEtfSeg()]] : []);
   function spark(values, w = 120, h = 36) {
     if (!values || values.length < 2) return "";
     const lo = Math.min(...values), hi = Math.max(...values), sx = w / (values.length - 1);
@@ -279,7 +282,7 @@
     const opts = D.manifest.strategies.map((s) => `<option value="${esc(s.id)}"${s.id === S.plan ? " selected" : ""}>${esc(s.name[S.lang])}</option>`).join("");
     return `<div class="card">
       ${ctl([[t("myPlan"), `<select class="plan-sel" data-set="plan" aria-label="${esc(t("planStrategy"))}">${opts}</select>`],
-        ceilingRow(),
+        ceilingRow(), ...maxEtfRows(),
         [t("holdingsMode"), seg("set", "mode", [["sim", t("modeSim")], ["real", t("modeReal")]], S.mode)],
         [t("riskStateLbl"), riskChip(e)]])}
     </div>`;
@@ -394,7 +397,7 @@
         ${e.next_trades.length ? `<span class="muted small">${t("nextTrades")}: ${e.next_trades.length}</span>` : ""}</a>`;
     }).join("");
     return `${staleBanner()}<h1>${t("strategies")}</h1>
-      ${ctl([ceilingRow(), [t("sortBy"), sortBar()]])}<div class="grid">${cards}</div>
+      ${ctl([ceilingRow(), ...maxEtfRows(), [t("sortBy"), sortBar()]])}<div class="grid">${cards}</div>
       <p class="muted small">${esc(t("metricsSince", { y: D.manifest.backtest_start.slice(0, 4), d: D.manifest.data_date }))}</p>`;
   }
 
@@ -421,7 +424,7 @@
         <div class="card-head"><h1><span class="sw" style="background:${scolor(s.id)};width:14px;height:14px"></span>${esc(s.name[S.lang])}</h1>
           ${id === S.plan ? `<span class="badge acc">${icon("star")} ${t("isPlan")}</span>` : `<button class="btn" type="button" data-set="plan" data-v="${esc(id)}">${icon("star")} ${t("setAsPlan")}</button>`}</div>
         <p class="muted">${esc(s.description[S.lang])}</p>
-        ${ctl([ceilingRow(), [t("riskStateLbl"), riskChip(e)]])}</div>
+        ${ctl([ceilingRow(), ...maxEtfRows(), [t("riskStateLbl"), riskChip(e)]])}</div>
       <div class="stats">${statsCards}</div>
       <div class="card">
         <div class="chart-ctl">${seg("view", "tab", tabs, view.tab, "full")}${ctrl}</div>
@@ -527,7 +530,7 @@
     }).join("");
     return `${staleBanner()}<h1>${t("compare")}</h1>
       <div class="card"><span class="label">${t("pick")}</span><div class="pickgrid">${chips}</div>
-        ${ctl([ceilingRow(), [t("rangeLbl"), seg("view", "cmpRange", RANGES.map((k) => [k, t("range")[k]]), view.cmpRange)]])}</div>
+        ${ctl([ceilingRow(), ...maxEtfRows(), [t("rangeLbl"), seg("view", "cmpRange", RANGES.map((k) => [k, t("range")[k]]), view.cmpRange)]])}</div>
       ${bts.length ? `<div class="card"><h3>${t("growthCompare")}</h3><div id="c-ceq" class="chart"></div></div>
       <div class="grid2"><div class="card"><h3>${t("tab_dd")}</h3><div id="c-cdd" class="chart sm"></div><p class="muted small">${t("ddChartNote")}</p></div>
         <div class="card"><h3>${t("rolling")}</h3><div id="c-crs" class="chart sm"></div></div></div>
@@ -570,6 +573,7 @@
       <div class="card form">
         <div class="field"><label for="f-plan">${t("planStrategy")}</label><select id="f-plan" data-set="plan">${opts}</select></div>
         <div class="field"><span class="lbl">${t("ceiling")}</span>${ceilingSeg()}</div>
+        ${maxEtfRows().length ? `<div class="field"><span class="lbl">${t("maxEtf")}</span>${maxEtfSeg()}</div>` : ""}
         <div class="field"><span class="lbl">${t("holdingsMode")}</span>${seg("set", "mode", [["sim", t("modeSim")], ["real", t("modeReal")]], S.mode)}</div>
         ${S.mode === "sim"
           ? `<div class="field"><label for="f-amount">${t("amount")} (USD)</label><input id="f-amount" type="number" inputmode="decimal" min="0" step="100" value="${S.amount}" data-save="amount"><span class="hint">${t("amountHint")}</span></div>`

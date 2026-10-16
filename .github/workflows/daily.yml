@@ -75,6 +75,16 @@ jobs:
           import glob, pandas as pd
           files = glob.glob("data/raw/prices/*.parquet")
           frames = {f: pd.read_parquet(f) for f in files}
+          # A run during market hours (a manual or push-triggered one) sees today's bar
+          # still forming; drop it until 16:30 ET.
+          now = pd.Timestamp.now(tz="America/New_York")
+          if now.hour * 60 + now.minute < 16 * 60 + 30:
+              today = pd.Timestamp(now.date())
+              for f, d in frames.items():
+                  if (d.index >= today).any():
+                      frames[f] = d[d.index < today]
+                      frames[f].to_parquet(f)
+                      print(f"dropped today's unfinished bar from {f}")
           last = {f: d.index.max() for f, d in frames.items()}
           common, newest = min(last.values()), max(last.values())
           if newest - common > pd.Timedelta(days=5):

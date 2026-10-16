@@ -85,6 +85,21 @@ jobs:
                       frames[f] = d[d.index < today]
                       frames[f].to_parquet(f)
                       print(f"dropped today's unfinished bar from {f}")
+          # A fresh bar is sometimes inconsistent (open outside [low, high]) until the vendor
+          # revises it; Stage 2 rejects that. Drop the newest day everywhere and wait.
+          def bad(d):
+              r = d.iloc[-1]
+              tol = 1e-6 * max(abs(r["high_raw"]), 1.0)
+              return not (r["low_raw"] - tol <= r["open_raw"] <= r["high_raw"] + tol
+                          and r["low_raw"] - tol <= r["close_raw"] <= r["high_raw"] + tol)
+          newest_all = max(d.index.max() for d in frames.values() if len(d))
+          suspect = [f for f, d in frames.items() if len(d) and d.index.max() == newest_all and bad(d)]
+          if suspect:
+              print(f"dropping {newest_all.date()}: inconsistent newest bar in {suspect}")
+              for f, d in frames.items():
+                  if (d.index >= newest_all).any():
+                      frames[f] = d[d.index < newest_all]
+                      frames[f].to_parquet(f)
           last = {f: d.index.max() for f, d in frames.items()}
           common, newest = min(last.values()), max(last.values())
           if newest - common > pd.Timedelta(days=5):

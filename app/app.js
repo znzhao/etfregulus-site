@@ -733,6 +733,8 @@
   }
 
   /* ------------------------------------------------------------------ boot */
+  // iOS Safari ignores user-scalable=no; block its pinch gestures explicitly.
+  for (const ev of ["gesturestart", "gesturechange", "gestureend"]) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
   async function boot() {
     applyTheme(); shell(route().page);
     app.innerHTML = loadingCard();

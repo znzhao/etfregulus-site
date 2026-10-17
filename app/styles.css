@@ -202,3 +202,9 @@ ul.plain { margin: 0; padding-left: 1.1rem; display: grid; gap: 6px; }
   main { padding-top: 14px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* No pinch or double-tap zoom on phones: the page is laid out for the screen, and zooming
+   only made it jump. Scrolling still works. (iOS ignores user-scalable=no; touch-action and
+   the gesture listener in app.js cover it.) Inputs at 16px so iOS does not zoom on focus. */
+html, body { touch-action: pan-x pan-y; }
+input, select, textarea { font-size: max(16px, 1em); }
